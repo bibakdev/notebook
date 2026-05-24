@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // output: 'export' // <-- این خط خروجی استاتیک را فعال می‌کند
 };
 
 export default nextConfig;
