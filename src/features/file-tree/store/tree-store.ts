@@ -14,7 +14,7 @@ interface TreeState {
   selectedNodeId: string | null;
   addingType: 'file' | 'folder' | null;
   addingParentId: string | null;
-  renamingNodeId: string | null; // <-- جدید
+  renamingNodeId: string | null;
 
   toggleFolder: (id: string) => void;
   selectNode: (id: string) => void;
@@ -24,10 +24,10 @@ interface TreeState {
   moveNode: (nodeId: string, targetParentId: string | null) => void;
 
   // Rename & Delete actions
-  startRenaming: (nodeId: string) => void; // <-- جدید
-  cancelRenaming: () => void; // <-- جدید
-  confirmRenaming: (newName: string) => void; // <-- جدید
-  deleteNode: (nodeId: string) => void; // <-- جدید
+  startRenaming: (nodeId: string) => void;
+  cancelRenaming: () => void;
+  confirmRenaming: (newName: string) => void;
+  deleteNode: (nodeId: string) => void;
 }
 
 let nextId = 100;
@@ -69,7 +69,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   selectedNodeId: null,
   addingType: null,
   addingParentId: null,
-  renamingNodeId: null, // <-- initial
+  renamingNodeId: null,
 
   toggleFolder: (id) =>
     set((state) => ({
@@ -134,13 +134,16 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   moveNode: (nodeId, targetParentId) => {
     const { treeData } = get();
 
+    // بررسی که مقصد یک پوشه باشد (اگر null نباشد)
     if (targetParentId !== null) {
       const targetNode = findNodeById(treeData, targetParentId);
       if (!targetNode || targetNode.type !== 'folder') return;
     }
 
-    if (targetParentId && isDescendant(treeData, targetParentId, nodeId))
+    // اصلاح شده: بررسی جلوگیری از ایجاد حلقه (نباید مقصد در زیردرخت گره مبدأ باشد)
+    if (targetParentId && isDescendant(treeData, nodeId, targetParentId)) {
       return;
+    }
 
     const { newTree, removed } = removeNodeById(treeData, nodeId);
     if (!removed) return;
@@ -183,8 +186,8 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     const { newTree } = removeNodeById(treeData, nodeId);
     set({
       treeData: newTree,
-      selectedNodeId: null, // پاک کردن انتخاب اگر گره انتخاب‌شده حذف شود
-      renamingNodeId: null // اگر در حال ویرایش بود، لغو کن
+      selectedNodeId: null,
+      renamingNodeId: null
     });
   }
 }));

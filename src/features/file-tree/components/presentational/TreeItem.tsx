@@ -2,7 +2,7 @@ import { cn } from '@/shared/lib/cn';
 import { File, Folder, FolderOpen, ChevronRight } from 'lucide-react';
 import type { TreeNode } from '../../types';
 import { InlineAddInput } from '../containers/InlineAddInput';
-import { InlineRenameInput } from '../containers/InlineRenameInput'; // <-- جدید
+import { InlineRenameInput } from '../containers/InlineRenameInput';
 import { useDropTarget } from '@/features/file-tree/hooks/use-drop-target';
 import { useAutoExpandOnDrag } from '@/features/file-tree/hooks/use-auto-expand-on-drag';
 import { useTreeStore } from '../../store/tree-store';
@@ -31,19 +31,18 @@ export function TreeItem({
   const isFolder = node.type === 'folder';
   const isSelected = selectedNodeId === node.id;
   const moveNode = useTreeStore((s) => s.moveNode);
-  const renamingNodeId = useTreeStore((s) => s.renamingNodeId); // <-- خواندن از store
+  const renamingNodeId = useTreeStore((s) => s.renamingNodeId);
 
-  // Drop target only for folders
-  const { dropTargetProps, isDragOver } = useDropTarget(
-    isFolder
-      ? {
-          onDrop: (e) => {
-            const draggedId = e.dataTransfer.getData('text/plain');
-            if (draggedId) moveNode(draggedId, node.id);
-          }
+  // اکنون برای همه گره‌ها dropTargetProps داریم، حتی فایل‌ها
+  // اما تابع onDrop فقط برای پوشه‌ها در نظر گرفته می‌شود.
+  const { dropTargetProps, isDragOver } = useDropTarget({
+    onDrop: isFolder
+      ? (e) => {
+          const draggedId = e.dataTransfer.getData('text/plain');
+          if (draggedId) moveNode(draggedId, node.id);
         }
-      : {}
-  );
+      : undefined
+  });
 
   // Auto-expand on hover while dragging
   useAutoExpandOnDrag(isDragOver, expanded, () => onToggle(node.id));
@@ -60,11 +59,13 @@ export function TreeItem({
           'flex items-center gap-2 min-w-0 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
           isSelected && 'bg-primary/10 text-primary font-medium',
           !isSelected && 'text-card-foreground hover:bg-muted',
-          isDragOver && 'ring-2 ring-primary/50'
+          // فقط برای پوشه‌ها حلقه visual نشان بده
+          isFolder && isDragOver && 'ring-2 ring-primary/50'
         )}
         draggable
         onDragStart={handleDragStart}
-        {...(isFolder ? dropTargetProps : {})}
+        // اعمال dropTargetProps برای همه گره‌ها (حتی فایل‌ها)
+        {...dropTargetProps}
         onClick={(e) => {
           e.stopPropagation();
           if (isFolder) onToggle(node.id);
