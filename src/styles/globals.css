@@ -1,19 +1,42 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-primary: #3b82f6;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #64748b;
   --color-background: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
-  --color-accent: #f59e0b;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-primary: #0066cc;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f0f4f8;
+  --color-secondary-foreground: #1a1a2e;
+  --color-muted: #f3f4f6;
+  --color-muted-foreground: #6b7280;
+  --color-accent: #64ffda;
+  --color-accent-foreground: #0b0c14;
   --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #0066cc;
+  --radius: 0.5rem;
 }
 
-/* استایل‌های عمومی */
-body {
-  @apply bg-background text-foreground;
+.dark {
+  --color-background: #0b0c14;
+  --color-foreground: #d6deeb;
+  --color-card: #181b2e;
+  --color-card-foreground: #d6deeb;
+  --color-primary: #64ffda;
+  --color-primary-foreground: #0b0c14;
+  --color-secondary: #1f2937;
+  --color-secondary-foreground: #d6deeb;
+  --color-muted: #1f2937;
+  --color-muted-foreground: #7f8c9b;
+  --color-accent: #64ffda;
+  --color-accent-foreground: #0b0c14;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #2d334a;
+  --color-input: #2d334a;
+  --color-ring: #64ffda;
 }

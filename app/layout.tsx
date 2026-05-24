@@ -1,15 +1,11 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
+import { AppLayout } from '@/features/app-shell/components/AppLayout';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'Notebook',
-  description: 'Prompt management notebook',
-  manifest: '/manifest.json',
-  icons: {
-    icon: '/icons/notebook-192x192.png',
-    apple: '/icons/notebook-192x192.png'
-  }
+  description: 'Prompt Management'
 };
 
 export default function RootLayout({
@@ -21,7 +17,7 @@ export default function RootLayout({
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <AppLayout>{children}</AppLayout>
         </ThemeProvider>
       </body>
     </html>
