@@ -1,6 +1,12 @@
 // src/features/file-tree/store/tree-store.ts
 import { create } from 'zustand';
 import type { TreeNode } from '../types';
+import {
+  isDescendant,
+  findNodeById,
+  removeNodeById,
+  insertNode
+} from '../lib/tree-utils';
 
 interface TreeState {
   treeData: TreeNode[];
@@ -14,6 +20,7 @@ interface TreeState {
   startAdding: (parentId: string | null, type: 'file' | 'folder') => void;
   cancelAdding: () => void;
   confirmAdding: (name: string) => void;
+  moveNode: (nodeId: string, targetParentId: string | null) => void;
 }
 
 let nextId = 100; // simple id counter
@@ -66,11 +73,10 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   selectNode: (id) => set({ selectedNodeId: id }),
 
   startAdding: (parentId, type) => {
-    // Ensure parent is expanded
     const state = get();
     const newExpanded = { ...state.expandedFolders };
     if (parentId) {
-      newExpanded[parentId] = true; // expand the target folder
+      newExpanded[parentId] = true;
     }
     set({
       addingType: type,
@@ -80,13 +86,6 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   },
   cancelAdding: () => set({ addingType: null, addingParentId: null }),
   confirmAdding: (name) => {
-    console.log(
-      'confirmAdding called',
-      name,
-      get().addingType,
-      get().addingParentId
-    );
-
     const { addingParentId, addingType, treeData } = get();
     if (!addingType || !name.trim()) {
       set({ addingType: null, addingParentId: null });
@@ -116,10 +115,30 @@ export const useTreeStore = create<TreeState>((set, get) => ({
 
     const newTree = addingParentId
       ? updateChildren(treeData)
-      : [...treeData, newNode]; // root level
+      : [...treeData, newNode];
 
     set({ treeData: newTree, addingType: null, addingParentId: null });
+  },
+
+  moveNode: (nodeId, targetParentId) => {
+    const { treeData } = get();
+
+    // اگر مقصد یک پوشه است، وجود آن و نوع پوشه را بررسی کن
+    if (targetParentId !== null) {
+      const targetNode = findNodeById(treeData, targetParentId);
+      if (!targetNode || targetNode.type !== 'folder') return;
+    }
+
+    // جلوگیری از افتادن درون خود یا نوادگان (حلقه)
+    if (targetParentId && isDescendant(treeData, targetParentId, nodeId))
+      return;
+
+    // حذف گره از مکان فعلی
+    const { newTree, removed } = removeNodeById(treeData, nodeId);
+    if (!removed) return;
+
+    // درج در والد جدید (اگر null باشد یعنی root)
+    const finalTree = insertNode(newTree, targetParentId, removed);
+    set({ treeData: finalTree });
   }
 }));
-
-export { initialTreeData };
