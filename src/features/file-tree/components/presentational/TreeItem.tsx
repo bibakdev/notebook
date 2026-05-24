@@ -2,6 +2,7 @@ import { cn } from '@/shared/lib/cn';
 import { File, Folder, FolderOpen, ChevronRight } from 'lucide-react';
 import type { TreeNode } from '../../types';
 import { InlineAddInput } from '../containers/InlineAddInput';
+import { InlineRenameInput } from '../containers/InlineRenameInput'; // <-- جدید
 import { useDropTarget } from '@/features/file-tree/hooks/use-drop-target';
 import { useAutoExpandOnDrag } from '@/features/file-tree/hooks/use-auto-expand-on-drag';
 import { useTreeStore } from '../../store/tree-store';
@@ -30,6 +31,7 @@ export function TreeItem({
   const isFolder = node.type === 'folder';
   const isSelected = selectedNodeId === node.id;
   const moveNode = useTreeStore((s) => s.moveNode);
+  const renamingNodeId = useTreeStore((s) => s.renamingNodeId); // <-- خواندن از store
 
   // Drop target only for folders
   const { dropTargetProps, isDragOver } = useDropTarget(
@@ -58,7 +60,7 @@ export function TreeItem({
           'flex items-center gap-2 min-w-0 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
           isSelected && 'bg-primary/10 text-primary font-medium',
           !isSelected && 'text-card-foreground hover:bg-muted',
-          isDragOver && 'ring-2 ring-primary/50' // highlight when drop target
+          isDragOver && 'ring-2 ring-primary/50'
         )}
         draggable
         onDragStart={handleDragStart}
@@ -90,8 +92,12 @@ export function TreeItem({
           <File size={14} className="flex-shrink-0" />
         )}
 
-        {/* نام */}
-        <span className="truncate flex-1 min-w-0">{node.label}</span>
+        {/* نام یا ورودی تغییر نام */}
+        {renamingNodeId === node.id ? (
+          <InlineRenameInput initialValue={node.label} />
+        ) : (
+          <span className="truncate flex-1 min-w-0">{node.label}</span>
+        )}
       </div>
 
       {isFolder && expanded && node.children && (

@@ -14,6 +14,7 @@ interface TreeState {
   selectedNodeId: string | null;
   addingType: 'file' | 'folder' | null;
   addingParentId: string | null;
+  renamingNodeId: string | null; // <-- جدید
 
   toggleFolder: (id: string) => void;
   selectNode: (id: string) => void;
@@ -21,9 +22,15 @@ interface TreeState {
   cancelAdding: () => void;
   confirmAdding: (name: string) => void;
   moveNode: (nodeId: string, targetParentId: string | null) => void;
+
+  // Rename & Delete actions
+  startRenaming: (nodeId: string) => void; // <-- جدید
+  cancelRenaming: () => void; // <-- جدید
+  confirmRenaming: (newName: string) => void; // <-- جدید
+  deleteNode: (nodeId: string) => void; // <-- جدید
 }
 
-let nextId = 100; // simple id counter
+let nextId = 100;
 
 const initialTreeData: TreeNode[] = [
   {
@@ -62,6 +69,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   selectedNodeId: null,
   addingType: null,
   addingParentId: null,
+  renamingNodeId: null, // <-- initial
 
   toggleFolder: (id) =>
     set((state) => ({
@@ -70,6 +78,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
         [id]: !state.expandedFolders[id]
       }
     })),
+
   selectNode: (id) => set({ selectedNodeId: id }),
 
   startAdding: (parentId, type) => {
@@ -84,7 +93,9 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       expandedFolders: newExpanded
     });
   },
+
   cancelAdding: () => set({ addingType: null, addingParentId: null }),
+
   confirmAdding: (name) => {
     const { addingParentId, addingType, treeData } = get();
     if (!addingType || !name.trim()) {
@@ -123,22 +134,57 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   moveNode: (nodeId, targetParentId) => {
     const { treeData } = get();
 
-    // اگر مقصد یک پوشه است، وجود آن و نوع پوشه را بررسی کن
     if (targetParentId !== null) {
       const targetNode = findNodeById(treeData, targetParentId);
       if (!targetNode || targetNode.type !== 'folder') return;
     }
 
-    // جلوگیری از افتادن درون خود یا نوادگان (حلقه)
     if (targetParentId && isDescendant(treeData, targetParentId, nodeId))
       return;
 
-    // حذف گره از مکان فعلی
     const { newTree, removed } = removeNodeById(treeData, nodeId);
     if (!removed) return;
 
-    // درج در والد جدید (اگر null باشد یعنی root)
     const finalTree = insertNode(newTree, targetParentId, removed);
     set({ treeData: finalTree });
+  },
+
+  // --- Rename ---
+  startRenaming: (nodeId) => set({ renamingNodeId: nodeId }),
+
+  cancelRenaming: () => set({ renamingNodeId: null }),
+
+  confirmRenaming: (newName) => {
+    const { renamingNodeId, treeData } = get();
+    if (!renamingNodeId || !newName.trim()) {
+      set({ renamingNodeId: null });
+      return;
+    }
+
+    const updateLabel = (nodes: TreeNode[]): TreeNode[] =>
+      nodes.map((node) => {
+        if (node.id === renamingNodeId) {
+          return { ...node, label: newName.trim() };
+        }
+        return node.children
+          ? { ...node, children: updateLabel(node.children) }
+          : node;
+      });
+
+    set({
+      treeData: updateLabel(treeData),
+      renamingNodeId: null
+    });
+  },
+
+  // --- Delete ---
+  deleteNode: (nodeId) => {
+    const { treeData } = get();
+    const { newTree } = removeNodeById(treeData, nodeId);
+    set({
+      treeData: newTree,
+      selectedNodeId: null, // پاک کردن انتخاب اگر گره انتخاب‌شده حذف شود
+      renamingNodeId: null // اگر در حال ویرایش بود، لغو کن
+    });
   }
 }));

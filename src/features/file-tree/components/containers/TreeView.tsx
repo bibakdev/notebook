@@ -3,6 +3,7 @@
 import { useTreeStore } from '../../store/tree-store';
 import { TreeItem } from '../presentational/TreeItem';
 import { InlineAddInput } from './InlineAddInput';
+import { useTreeKeyboardShortcuts } from '../../hooks/use-tree-keyboard-shortcuts';
 
 export function TreeView() {
   const treeData = useTreeStore((s) => s.treeData);
@@ -12,6 +13,9 @@ export function TreeView() {
   const selectNode = useTreeStore((s) => s.selectNode);
   const addingParentId = useTreeStore((s) => s.addingParentId);
   const addingType = useTreeStore((s) => s.addingType);
+
+  // فعال‌سازی میانبرهای صفحه‌کلید F2 / Delete
+  useTreeKeyboardShortcuts();
 
   return (
     <ul className="space-y-0.5">
