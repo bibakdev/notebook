@@ -14,6 +14,7 @@ export function HeaderContainer() {
   const addGroup = usePromptStore((s) => s.addGroup);
   const groupSelectedBoxes = usePromptStore((s) => s.groupSelectedBoxes);
   const selectedBoxIds = usePromptStore((s) => s.selectedBoxIds);
+  const addBox = usePromptStore((s) => s.addBox);
 
   useEffect(() => {
     setMounted(true);
@@ -29,6 +30,12 @@ export function HeaderContainer() {
 
   return (
     <HeaderView onMenuToggle={toggleSidebar}>
+      <button
+        onClick={() => addBox()}
+        className="rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10"
+      >
+        ＋ Card
+      </button>
       <button
         onClick={addGroup}
         className="rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10"
