@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
-import { AppLayout } from '@/features/app-shell/components/AppLayout';
+import { AppLayout } from '@/features/app-shell/components/containers/AppLayout';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {

@@ -1,6 +1,7 @@
 import { cn } from '@/shared/lib/cn';
 import { File, Folder, FolderOpen, ChevronRight } from 'lucide-react';
-import type { TreeNode } from '../types';
+import type { TreeNode } from '../../types';
+import { InlineAddInput } from '../containers/InlineAddInput';
 
 interface TreeItemProps {
   node: TreeNode;
@@ -8,6 +9,8 @@ interface TreeItemProps {
   selectedNodeId: string | null;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
+  addingParentId: string | null;
+  addingType: 'file' | 'folder' | null;
 }
 
 export function TreeItem({
@@ -15,7 +18,9 @@ export function TreeItem({
   expanded,
   selectedNodeId,
   onToggle,
-  onSelect
+  onSelect,
+  addingParentId,
+  addingType
 }: TreeItemProps) {
   const isFolder = node.type === 'folder';
   const isSelected = selectedNodeId === node.id;
@@ -63,8 +68,15 @@ export function TreeItem({
               selectedNodeId={selectedNodeId}
               onToggle={onToggle}
               onSelect={onSelect}
+              addingParentId={addingParentId}
+              addingType={addingType}
             />
           ))}
+          {addingParentId === node.id && addingType && (
+            <li>
+              <InlineAddInput />
+            </li>
+          )}
         </ul>
       )}
     </li>

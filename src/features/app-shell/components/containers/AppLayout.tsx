@@ -1,5 +1,5 @@
-import { SidebarContainer } from '@/features/sidebar/components/SidebarContainer';
-import { MainContainer } from '@/features/main-content/components/MainContainer';
+import { SidebarContainer } from '@/features/sidebar/components/containers/SidebarContainer';
+import { MainContainer } from '@/features/main-content/components/containers/MainContainer';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (

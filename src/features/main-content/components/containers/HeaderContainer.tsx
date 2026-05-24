@@ -3,7 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
 import { useSidebarStore } from '@/features/sidebar/store/sidebar-store';
-import { HeaderView } from './HeaderView';
+import { HeaderView } from '../presentational/HeaderView';
 
 export function HeaderContainer() {
   const { theme, setTheme } = useTheme();
@@ -14,7 +14,6 @@ export function HeaderContainer() {
     setMounted(true);
   }, []);
 
-  // تا زمان mount شدن، یک مقدار پیش‌فرض ثابت (مثلاً Dark) نشان بده تا با سرور تطابق داشته باشد
   const themeLabel = mounted
     ? theme === 'dark'
       ? '🌙 Dark'

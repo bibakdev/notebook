@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 interface HeaderViewProps {
   onMenuToggle: () => void;
-  children?: ReactNode; // action buttons slot
+  children?: ReactNode;
 }
 
 export function HeaderView({ onMenuToggle, children }: HeaderViewProps) {

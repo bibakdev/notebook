@@ -1,30 +1,28 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { Resizable, type ResizeCallbackData } from 'react-resizable';
 import 'react-resizable/css/styles.css';
-
-import { SidebarHeader } from './SidebarHeader';
-import { SidebarActionButtons } from './SidebarActionButtons';
-import { SidebarTree } from './SidebarTree';
 
 interface SidebarViewProps {
   isOpen: boolean;
   width: number;
   onClose: () => void;
-  onFileClick?: () => void;
-  onFolderClick?: () => void;
   onResize: (width: number) => void;
+  header: ReactNode;
+  actionButtons: ReactNode;
+  tree: ReactNode;
 }
 
 export function SidebarView({
   isOpen,
   width,
   onClose,
-  onFileClick,
-  onFolderClick,
-  onResize
+  onResize,
+  header,
+  actionButtons,
+  tree
 }: SidebarViewProps) {
   const handleResize = useCallback(
     (_event: React.SyntheticEvent, data: ResizeCallbackData) => {
@@ -42,12 +40,9 @@ export function SidebarView({
       )}
       style={{ width: `${width}px` }}
     >
-      <SidebarHeader onClose={onClose} />
-      <SidebarActionButtons
-        onFileClick={onFileClick}
-        onFolderClick={onFolderClick}
-      />
-      <SidebarTree />
+      {header}
+      {actionButtons}
+      {tree}
     </aside>
   );
 
@@ -72,7 +67,7 @@ export function SidebarView({
       </div>
 
       {/* Desktop */}
-      <div className="hidden lg:block h-Screen">
+      <div className="hidden lg:block h-screen">
         <Resizable
           className="sidebar-resizable h-full"
           width={width}
