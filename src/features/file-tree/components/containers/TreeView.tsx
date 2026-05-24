@@ -25,6 +25,7 @@ export function TreeView() {
           onSelect={selectNode}
           addingParentId={addingParentId}
           addingType={addingType}
+          expandedFolders={expandedFolders}
         />
       ))}
       {addingParentId === null && addingType && (

@@ -9,20 +9,26 @@ export function SidebarActionButtons() {
   const startAdding = useTreeStore((s) => s.startAdding);
 
   const handleAdd = (type: 'file' | 'folder') => {
-    let parentId: string | null = null;
-    if (selectedNodeId) {
-      const findNode = (nodes: typeof treeData): boolean => {
-        for (const n of nodes) {
-          if (n.id === selectedNodeId && n.type === 'folder') return true;
-          if (n.children && findNode(n.children)) return true;
-        }
-        return false;
-      };
-      if (findNode(treeData)) {
-        parentId = selectedNodeId;
-      }
+    // اگر هیچ نودی انتخاب نشده → افزودن در ریشه
+    if (selectedNodeId === null) {
+      startAdding(null, type);
+      return;
     }
-    startAdding(parentId, type);
+
+    // اگر نود انتخاب‌شده یک فایل باشد → هیچ کاری نکن
+    const isFolder = (nodes: typeof treeData): boolean => {
+      for (const n of nodes) {
+        if (n.id === selectedNodeId) return n.type === 'folder';
+        if (n.children && isFolder(n.children)) return true;
+      }
+      return false;
+    };
+
+    if (isFolder(treeData)) {
+      // نود انتخاب‌شده یک پوشه است → افزودن در آن
+      startAdding(selectedNodeId, type);
+    }
+    // در غیر این صورت (فایل) هیچ اتفاقی نمی‌افتد
   };
 
   return (

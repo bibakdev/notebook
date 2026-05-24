@@ -22,6 +22,10 @@ export function InlineAddInput() {
     }
   };
 
+  const handleBlur = () => {
+    confirmAdding(inputRef.current?.value || '');
+  };
+
   return (
     <div className="flex items-center gap-2 py-1 px-2 text-sm">
       {addingType === 'file' ? (
@@ -34,7 +38,7 @@ export function InlineAddInput() {
         className="flex-1 border border-border rounded px-1.5 py-0.5 text-sm bg-transparent focus:outline-none focus:border-primary"
         placeholder={addingType === 'file' ? 'نام فایل...' : 'نام پوشه...'}
         onKeyDown={handleKeyDown}
-        onBlur={cancelAdding}
+        onBlur={handleBlur}
       />
     </div>
   );
