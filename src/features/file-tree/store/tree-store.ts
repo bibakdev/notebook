@@ -110,23 +110,8 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       children: addingType === 'folder' ? [] : undefined
     };
 
-    const updateChildren = (nodes: TreeNode[]): TreeNode[] =>
-      nodes.map((node) => {
-        if (node.id === addingParentId) {
-          return {
-            ...node,
-            children: [...(node.children || []), newNode]
-          };
-        }
-        if (node.children) {
-          return { ...node, children: updateChildren(node.children) };
-        }
-        return node;
-      });
-
-    const newTree = addingParentId
-      ? updateChildren(treeData)
-      : [...treeData, newNode];
+    // استفاده از insertNode که ترتیب پوشه/فایل را حفظ می‌کند
+    const newTree = insertNode(treeData, addingParentId, newNode);
 
     set({ treeData: newTree, addingType: null, addingParentId: null });
   },
@@ -140,7 +125,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       if (!targetNode || targetNode.type !== 'folder') return;
     }
 
-    // اصلاح شده: بررسی جلوگیری از ایجاد حلقه (نباید مقصد در زیردرخت گره مبدأ باشد)
+    // جلوگیری از ایجاد حلقه (نباید مقصد در زیردرخت گره مبدأ باشد)
     if (targetParentId && isDescendant(treeData, nodeId, targetParentId)) {
       return;
     }
@@ -148,6 +133,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     const { newTree, removed } = removeNodeById(treeData, nodeId);
     if (!removed) return;
 
+    // insertNode ترتیب را رعایت می‌کند
     const finalTree = insertNode(newTree, targetParentId, removed);
     set({ treeData: finalTree });
   },
