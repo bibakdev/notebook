@@ -16,6 +16,12 @@ interface TreeState {
   addingParentId: string | null;
   renamingNodeId: string | null;
 
+  // جدید: وضعیت حذف در انتظار تأیید
+  pendingDeleteNodeId: string | null;
+  requestDeleteNode: (nodeId: string) => void;
+  cancelDeleteNode: () => void;
+  confirmDeleteNode: () => void;
+
   toggleFolder: (id: string) => void;
   selectNode: (id: string) => void;
   startAdding: (parentId: string | null, type: 'file' | 'folder') => void;
@@ -71,6 +77,18 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   addingParentId: null,
   renamingNodeId: null,
 
+  // جدید
+  pendingDeleteNodeId: null,
+  requestDeleteNode: (nodeId) => set({ pendingDeleteNodeId: nodeId }),
+  cancelDeleteNode: () => set({ pendingDeleteNodeId: null }),
+  confirmDeleteNode: () => {
+    const { pendingDeleteNodeId } = get();
+    if (pendingDeleteNodeId) {
+      get().deleteNode(pendingDeleteNodeId); // از تابع حذف موجود استفاده می‌کنیم
+      set({ pendingDeleteNodeId: null });
+    }
+  },
+
   toggleFolder: (id) =>
     set((state) => ({
       expandedFolders: {
@@ -110,7 +128,6 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       children: addingType === 'folder' ? [] : undefined
     };
 
-    // استفاده از insertNode که ترتیب پوشه/فایل را حفظ می‌کند
     const newTree = insertNode(treeData, addingParentId, newNode);
 
     set({ treeData: newTree, addingType: null, addingParentId: null });
@@ -119,13 +136,11 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   moveNode: (nodeId, targetParentId) => {
     const { treeData } = get();
 
-    // بررسی که مقصد یک پوشه باشد (اگر null نباشد)
     if (targetParentId !== null) {
       const targetNode = findNodeById(treeData, targetParentId);
       if (!targetNode || targetNode.type !== 'folder') return;
     }
 
-    // جلوگیری از ایجاد حلقه (نباید مقصد در زیردرخت گره مبدأ باشد)
     if (targetParentId && isDescendant(treeData, nodeId, targetParentId)) {
       return;
     }
@@ -133,7 +148,6 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     const { newTree, removed } = removeNodeById(treeData, nodeId);
     if (!removed) return;
 
-    // insertNode ترتیب را رعایت می‌کند
     const finalTree = insertNode(newTree, targetParentId, removed);
     set({ treeData: finalTree });
   },
@@ -166,7 +180,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     });
   },
 
-  // --- Delete ---
+  // --- Delete (بدون تغییر) ---
   deleteNode: (nodeId) => {
     const { treeData } = get();
     const { newTree } = removeNodeById(treeData, nodeId);

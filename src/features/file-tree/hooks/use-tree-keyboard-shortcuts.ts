@@ -5,11 +5,10 @@ export function useTreeKeyboardShortcuts() {
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
   const renamingNodeId = useTreeStore((s) => s.renamingNodeId);
   const startRenaming = useTreeStore((s) => s.startRenaming);
-  const deleteNode = useTreeStore((s) => s.deleteNode);
+  const requestDeleteNode = useTreeStore((s) => s.requestDeleteNode); // جایگزین deleteNode
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // اگر فوکوس روی یک عنصر ویرایشی (input, textarea, contentEditable) باشد کاری نکن
       const tag = (document.activeElement?.tagName || '').toLowerCase();
       const isEditable =
         tag === 'input' ||
@@ -17,20 +16,19 @@ export function useTreeKeyboardShortcuts() {
         document.activeElement?.getAttribute('contenteditable') === 'true';
       if (isEditable) return;
 
-      // F2: شروع rename (فقط اگر گره انتخاب شده و در حال rename نیست)
       if (e.key === 'F2' && selectedNodeId && !renamingNodeId) {
         e.preventDefault();
         startRenaming(selectedNodeId);
       }
 
-      // Delete: حذف گره انتخاب شده
+      // به جای حذف مستقیم، درخواست حذف می‌دهیم
       if (e.key === 'Delete' && selectedNodeId) {
         e.preventDefault();
-        deleteNode(selectedNodeId);
+        requestDeleteNode(selectedNodeId);
       }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [selectedNodeId, renamingNodeId, startRenaming, deleteNode]);
+  }, [selectedNodeId, renamingNodeId, startRenaming, requestDeleteNode]);
 }
