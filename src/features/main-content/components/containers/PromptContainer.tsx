@@ -8,27 +8,49 @@ import { Separator } from '../presentational/Separator';
 
 export function PromptContainer() {
   const rootOrder = usePromptStore((s) => s.rootOrder);
+  const addBoxAfter = usePromptStore((s) => s.addBoxAfter);
 
   return (
     <div className="prompt-container flex flex-col gap-0 pb-10">
+      {/* جداکننده قبل از اولین آیتم (در صورت وجود) */}
+      {rootOrder.length > 0 && (
+        <Separator
+          prevBoxId=""
+          nextBoxId={rootOrder[0].id}
+          onAddClick={() => addBoxAfter(null)} // درج در ابتدای rootOrder
+        />
+      )}
       {rootOrder.map((item, index) => {
-        if (item.type === 'box') {
-          // Check if next item is also a box → add separator
-          const nextItem = rootOrder[index + 1];
-          const showSeparator = nextItem?.type === 'box';
+        const isLast = index === rootOrder.length - 1;
 
+        if (item.type === 'box') {
           return (
             <Fragment key={item.id}>
               <PromptBox boxId={item.id} isStandalone />
-              {showSeparator && (
-                <Separator prevBoxId={item.id} nextBoxId={nextItem!.id} />
+              {!isLast && (
+                <Separator
+                  prevBoxId={item.id}
+                  nextBoxId={rootOrder[index + 1].id}
+                  onAddClick={() => addBoxAfter(item.id)} // بعد از این باکس
+                />
               )}
             </Fragment>
           );
         }
 
         if (item.type === 'group') {
-          return <PromptGroup key={item.id} groupId={item.id} />;
+          return (
+            <Fragment key={item.id}>
+              <PromptGroup groupId={item.id} />
+              {!isLast && (
+                <Separator
+                  prevBoxId={item.id}
+                  nextBoxId={rootOrder[index + 1].id}
+                  onAddClick={() => addBoxAfter(item.id)} // بعد از این گروه
+                />
+              )}
+            </Fragment>
+          );
         }
 
         return null;

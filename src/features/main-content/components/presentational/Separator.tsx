@@ -5,9 +5,14 @@ import { cn } from '@/shared/lib/cn';
 interface SeparatorProps {
   prevBoxId: string;
   nextBoxId: string;
+  onAddClick?: () => void;
 }
 
-export function Separator({ prevBoxId, nextBoxId }: SeparatorProps) {
+export function Separator({
+  prevBoxId,
+  nextBoxId,
+  onAddClick
+}: SeparatorProps) {
   return (
     <div
       className={cn(
@@ -19,9 +24,10 @@ export function Separator({ prevBoxId, nextBoxId }: SeparatorProps) {
       <div className="bg-card px-2 py-0.5 rounded-md border border-border shadow-sm z-10 flex-shrink-0">
         <button
           className="text-xs font-mono text-muted-foreground bg-transparent border-0 px-2 py-1 rounded hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-          title="ویرایش کارت بالا"
+          title="افزودن کارت جدید"
+          onClick={onAddClick}
         >
-          Editor
+          + Editor
         </button>
       </div>
       <div className="flex-grow border-t border-dashed border-muted-foreground/30" />

@@ -31,6 +31,7 @@ interface PromptState {
 
   // Box actions
   addBox: (parentGroupId?: string) => void;
+  addBoxAfter: (afterItemId: string | null) => void;
   updateBoxTitle: (boxId: string, title: string) => void;
   updateBoxContent: (boxId: string, content: string) => void;
   toggleBoxDirection: (boxId: string) => void;
@@ -77,10 +78,9 @@ function findBoxLocation(
   };
 }
 
-function removeBoxFromRoot(rootOrder: RootItem[], boxId: string): RootItem[] {
-  return rootOrder.filter(
-    (item) => !(item.type === 'box' && item.id === boxId)
-  );
+// این تابع جایگزین removeBoxFromRoot می‌شود و هر نوع آیتم را حذف می‌کند
+function removeItemFromRoot(rootOrder: RootItem[], itemId: string): RootItem[] {
+  return rootOrder.filter((item) => item.id !== itemId);
 }
 
 // ====== Initial Data ======
@@ -171,6 +171,36 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     });
   },
 
+  // ** جدید: افزودن باکس بعد از یک موقعیت خاص در rootOrder **
+  addBoxAfter: (afterItemId) => {
+    const box = newBoxData();
+    set((state) => {
+      if (afterItemId === null) {
+        // درج در ابتدای rootOrder
+        return {
+          boxes: { ...state.boxes, [box.id]: box },
+          rootOrder: [{ type: 'box', id: box.id }, ...state.rootOrder]
+        };
+      }
+
+      const idx = state.rootOrder.findIndex((item) => item.id === afterItemId);
+      if (idx === -1) {
+        // fallback: انتهای لیست
+        return {
+          boxes: { ...state.boxes, [box.id]: box },
+          rootOrder: [...state.rootOrder, { type: 'box', id: box.id }]
+        };
+      }
+
+      const newRoot = [...state.rootOrder];
+      newRoot.splice(idx + 1, 0, { type: 'box', id: box.id });
+      return {
+        boxes: { ...state.boxes, [box.id]: box },
+        rootOrder: newRoot
+      };
+    });
+  },
+
   updateBoxTitle: (boxId, title) =>
     set((state) => ({
       boxes: {
@@ -217,7 +247,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     if (loc.context === 'root') {
       set({
         boxes: newBoxes,
-        rootOrder: removeBoxFromRoot(state.rootOrder, boxId),
+        rootOrder: removeItemFromRoot(state.rootOrder, boxId),
         selectedBoxIds: state.selectedBoxIds.filter((id) => id !== boxId)
       });
     } else {
@@ -359,22 +389,19 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     const group = state.groups[groupId];
     if (!group) return;
 
-    // Move boxes from group to root
     const newBoxes = { ...state.boxes };
-    const newRoot = removeBoxFromRoot(state.rootOrder, groupId);
-    // We don't delete the boxes, they just become... actually, in the HTML,
-    // deleting a group removes the group and its contents.
-    // Let's follow that: delete group and all its boxes.
-    const newBoxesAfterDelete = { ...newBoxes };
     for (const boxId of group.boxIds) {
-      delete newBoxesAfterDelete[boxId];
+      delete newBoxes[boxId];
     }
 
     const newGroups = { ...state.groups };
     delete newGroups[groupId];
 
+    // استفاده از removeItemFromRoot که هم باکس و هم گروه را حذف می‌کند
+    const newRoot = removeItemFromRoot(state.rootOrder, groupId);
+
     set({
-      boxes: newBoxesAfterDelete,
+      boxes: newBoxes,
       groups: newGroups,
       rootOrder: newRoot,
       selectedBoxIds: state.selectedBoxIds.filter(
@@ -436,15 +463,13 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
     const group = newGroupData({ title: 'Selected Zone' });
 
-    // Remove selected boxes from root and add to group
     let newRoot = [...state.rootOrder];
     const groupBoxIds: string[] = [];
 
     for (const boxId of state.selectedBoxIds) {
-      // Only group boxes that are at root level
       const loc = findBoxLocation(state)(boxId);
       if (loc?.context === 'root') {
-        newRoot = removeBoxFromRoot(newRoot, boxId);
+        newRoot = removeItemFromRoot(newRoot, boxId);
         groupBoxIds.push(boxId);
       }
     }
@@ -453,7 +478,6 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
     group.boxIds = groupBoxIds;
 
-    // Find insertion point (at the position of the first selected box)
     const firstBoxId = groupBoxIds[0];
     const firstIdx = state.rootOrder.findIndex(
       (item) => item.type === 'box' && item.id === firstBoxId
