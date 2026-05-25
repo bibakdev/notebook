@@ -1,3 +1,4 @@
+// src/features/main-content/components/containers/PromptContainer.tsx
 'use client';
 
 import { Fragment } from 'react';
@@ -7,12 +8,24 @@ import { PromptGroup } from '../presentational/PromptGroup';
 import { Separator } from '../presentational/Separator';
 
 export function PromptContainer() {
-  const rootOrder = usePromptStore((s) => s.rootOrder);
+  const currentFileId = usePromptStore((s) => s.currentFileId);
+  const file = usePromptStore((s) =>
+    currentFileId ? s.filesData[currentFileId] : undefined
+  );
   const addBoxAfter = usePromptStore((s) => s.addBoxAfter);
+
+  if (!file) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <p className="text-lg">یک فایل از سایدبار انتخاب کنید</p>
+      </div>
+    );
+  }
+
+  const rootOrder = file.rootOrder;
 
   return (
     <div className="prompt-container flex flex-col gap-0 pb-10">
-      {/* اگر هیچ آیتمی وجود نداشته باشد، یک جداکننده برای افزودن اولین باکس نمایش بده */}
       {rootOrder.length === 0 && (
         <Separator
           prevBoxId=""
@@ -20,14 +33,12 @@ export function PromptContainer() {
           onAddClick={() => addBoxAfter(null)}
         />
       )}
-
       {rootOrder.length > 0 && (
         <>
-          {/* جداکننده قبل از اولین آیتم (در صورت وجود) */}
           <Separator
             prevBoxId=""
             nextBoxId={rootOrder[0].id}
-            onAddClick={() => addBoxAfter(null)} // درج در ابتدای rootOrder
+            onAddClick={() => addBoxAfter(null)}
           />
           {rootOrder.map((item, index) => {
             const isLast = index === rootOrder.length - 1;
@@ -40,7 +51,7 @@ export function PromptContainer() {
                     <Separator
                       prevBoxId={item.id}
                       nextBoxId={rootOrder[index + 1].id}
-                      onAddClick={() => addBoxAfter(item.id)} // بعد از این باکس
+                      onAddClick={() => addBoxAfter(item.id)}
                     />
                   )}
                 </Fragment>
@@ -55,7 +66,7 @@ export function PromptContainer() {
                     <Separator
                       prevBoxId={item.id}
                       nextBoxId={rootOrder[index + 1].id}
-                      onAddClick={() => addBoxAfter(item.id)} // بعد از این گروه
+                      onAddClick={() => addBoxAfter(item.id)}
                     />
                   )}
                 </Fragment>

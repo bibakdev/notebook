@@ -1,3 +1,4 @@
+// src/features/main-content/store/prompt-store.ts
 import { create } from 'zustand';
 import type { BoxData, GroupData, RootItem } from '../types';
 
@@ -23,11 +24,27 @@ function newGroupData(overrides: Partial<GroupData> = {}): GroupData {
   };
 }
 
-interface PromptState {
+// ========== per‑file state ==========
+export interface FileContent {
   rootOrder: RootItem[];
   boxes: Record<string, BoxData>;
   groups: Record<string, GroupData>;
   selectedBoxIds: string[];
+}
+
+function emptyFileContent(): FileContent {
+  return {
+    rootOrder: [],
+    boxes: {},
+    groups: {},
+    selectedBoxIds: []
+  };
+}
+
+interface PromptState {
+  filesData: Record<string, FileContent>;
+  currentFileId: string | null;
+  setCurrentFile: (fileId: string | null) => void; // also ensures data
 
   // Box actions
   addBox: (parentGroupId?: string) => void;
@@ -53,7 +70,7 @@ interface PromptState {
   groupSelectedBoxes: () => void;
   clearSelection: () => void;
 
-  // جدید: وضعیت‌های مودال حذف
+  // Delete confirmation
   pendingDeleteBoxId: string | null;
   pendingDeleteGroupId: string | null;
   requestDeleteBox: (boxId: string) => void;
@@ -62,388 +79,554 @@ interface PromptState {
   confirmDeletePrompt: () => void;
 }
 
-function findBoxLocation(
-  state: Pick<PromptState, 'rootOrder' | 'groups'>
-): (
+// Helper: get mutable file state for current file (or undefined)
+function getCurrentFileState(
+  state: Pick<PromptState, 'filesData' | 'currentFileId'>
+): FileContent | undefined {
+  const id = state.currentFileId;
+  if (!id) return undefined;
+  return state.filesData[id];
+}
+
+// Helper: find box location inside a file's content
+function findBoxLocationInFile(
+  file: FileContent,
   boxId: string
-) =>
+):
   | { context: 'root'; index: number }
   | { context: 'group'; groupId: string; index: number }
   | null {
-  return (boxId: string) => {
-    const rootIndex = state.rootOrder.findIndex(
-      (item) => item.type === 'box' && item.id === boxId
-    );
-    if (rootIndex !== -1) return { context: 'root', index: rootIndex };
+  const rootIndex = file.rootOrder.findIndex(
+    (item) => item.type === 'box' && item.id === boxId
+  );
+  if (rootIndex !== -1) return { context: 'root', index: rootIndex };
 
-    for (const [groupId, group] of Object.entries(state.groups)) {
-      const idx = group.boxIds.indexOf(boxId);
-      if (idx !== -1) return { context: 'group', groupId, index: idx };
-    }
-    return null;
-  };
-}
-
-function removeItemFromRoot(rootOrder: RootItem[], itemId: string): RootItem[] {
-  return rootOrder.filter((item) => item.id !== itemId);
+  for (const [groupId, group] of Object.entries(file.groups)) {
+    const idx = group.boxIds.indexOf(boxId);
+    if (idx !== -1) return { context: 'group', groupId, index: idx };
+  }
+  return null;
 }
 
 export const usePromptStore = create<PromptState>((set, get) => ({
-  // ====== Initial State ======
-  rootOrder: [],
-  boxes: {},
-  groups: {},
-  selectedBoxIds: [],
+  filesData: {},
+  currentFileId: null,
   pendingDeleteBoxId: null,
   pendingDeleteGroupId: null,
 
-  // ---- Box Actions ----
+  setCurrentFile: (fileId) => {
+    if (fileId) {
+      set((state) => {
+        const newFiles = { ...state.filesData };
+        if (!newFiles[fileId]) {
+          newFiles[fileId] = emptyFileContent();
+        }
+        return {
+          filesData: newFiles,
+          currentFileId: fileId,
+          pendingDeleteBoxId: null, // cancel any pending modal on switch
+          pendingDeleteGroupId: null
+        };
+      });
+    } else {
+      set({ currentFileId: null });
+    }
+  },
+
+  // --- Box Actions ---
   addBox: (parentGroupId) => {
     const box = newBoxData();
     set((state) => {
-      if (parentGroupId && state.groups[parentGroupId]) {
-        return {
-          boxes: { ...state.boxes, [box.id]: box },
-          groups: {
-            ...state.groups,
-            [parentGroupId]: {
-              ...state.groups[parentGroupId],
-              boxIds: [...state.groups[parentGroupId].boxIds, box.id]
-            }
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = { ...files[fileId] };
+      if (parentGroupId && file.groups[parentGroupId]) {
+        file.boxes = { ...file.boxes, [box.id]: box };
+        file.groups = {
+          ...file.groups,
+          [parentGroupId]: {
+            ...file.groups[parentGroupId],
+            boxIds: [...file.groups[parentGroupId].boxIds, box.id]
           }
         };
+      } else {
+        file.boxes = { ...file.boxes, [box.id]: box };
+        file.rootOrder = [...file.rootOrder, { type: 'box', id: box.id }];
       }
-      return {
-        boxes: { ...state.boxes, [box.id]: box },
-        rootOrder: [...state.rootOrder, { type: 'box', id: box.id }]
-      };
+      files[fileId] = file;
+      return { filesData: files };
     });
   },
 
   addBoxAfter: (afterItemId) => {
     const box = newBoxData();
     set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = { ...files[fileId] };
+      file.boxes = { ...file.boxes, [box.id]: box };
+
       if (afterItemId === null) {
-        return {
-          boxes: { ...state.boxes, [box.id]: box },
-          rootOrder: [{ type: 'box', id: box.id }, ...state.rootOrder]
-        };
+        file.rootOrder = [{ type: 'box', id: box.id }, ...file.rootOrder];
+      } else {
+        const idx = file.rootOrder.findIndex((item) => item.id === afterItemId);
+        const newRoot = [...file.rootOrder];
+        newRoot.splice(idx === -1 ? newRoot.length : idx + 1, 0, {
+          type: 'box',
+          id: box.id
+        });
+        file.rootOrder = newRoot;
       }
-
-      const idx = state.rootOrder.findIndex((item) => item.id === afterItemId);
-      if (idx === -1) {
-        return {
-          boxes: { ...state.boxes, [box.id]: box },
-          rootOrder: [...state.rootOrder, { type: 'box', id: box.id }]
-        };
-      }
-
-      const newRoot = [...state.rootOrder];
-      newRoot.splice(idx + 1, 0, { type: 'box', id: box.id });
-      return {
-        boxes: { ...state.boxes, [box.id]: box },
-        rootOrder: newRoot
-      };
+      files[fileId] = file;
+      return { filesData: files };
     });
   },
 
   updateBoxTitle: (boxId, title) =>
-    set((state) => ({
-      boxes: {
-        ...state.boxes,
-        [boxId]: { ...state.boxes[boxId], title }
-      }
-    })),
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      if (!file.boxes[boxId]) return {};
+      files[fileId] = {
+        ...file,
+        boxes: {
+          ...file.boxes,
+          [boxId]: { ...file.boxes[boxId], title }
+        }
+      };
+      return { filesData: files };
+    }),
 
   updateBoxContent: (boxId, content) =>
-    set((state) => ({
-      boxes: {
-        ...state.boxes,
-        [boxId]: { ...state.boxes[boxId], content }
-      }
-    })),
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      if (!file.boxes[boxId]) return {};
+      files[fileId] = {
+        ...file,
+        boxes: {
+          ...file.boxes,
+          [boxId]: { ...file.boxes[boxId], content }
+        }
+      };
+      return { filesData: files };
+    }),
 
   toggleBoxDirection: (boxId) =>
-    set((state) => ({
-      boxes: {
-        ...state.boxes,
-        [boxId]: {
-          ...state.boxes[boxId],
-          direction: state.boxes[boxId].direction === 'rtl' ? 'ltr' : 'rtl'
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const box = file.boxes[boxId];
+      if (!box) return {};
+      files[fileId] = {
+        ...file,
+        boxes: {
+          ...file.boxes,
+          [boxId]: {
+            ...box,
+            direction: box.direction === 'rtl' ? 'ltr' : 'rtl'
+          }
         }
-      }
-    })),
+      };
+      return { filesData: files };
+    }),
 
   setBoxMode: (boxId, mode) =>
-    set((state) => ({
-      boxes: {
-        ...state.boxes,
-        [boxId]: { ...state.boxes[boxId], mode }
-      }
-    })),
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const box = file.boxes[boxId];
+      if (!box) return {};
+      files[fileId] = {
+        ...file,
+        boxes: {
+          ...file.boxes,
+          [boxId]: { ...box, mode }
+        }
+      };
+      return { filesData: files };
+    }),
 
   deleteBox: (boxId) => {
-    const state = get();
-    const loc = findBoxLocation(state)(boxId);
-    if (!loc) return;
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const loc = findBoxLocationInFile(file, boxId);
+      if (!loc) return {};
 
-    const newBoxes = { ...state.boxes };
-    delete newBoxes[boxId];
+      const newBoxes = { ...file.boxes };
+      delete newBoxes[boxId];
 
-    if (loc.context === 'root') {
-      set({
-        boxes: newBoxes,
-        rootOrder: removeItemFromRoot(state.rootOrder, boxId),
-        selectedBoxIds: state.selectedBoxIds.filter((id) => id !== boxId)
-      });
-    } else {
-      set({
-        boxes: newBoxes,
-        groups: {
-          ...state.groups,
+      let newRoot = [...file.rootOrder];
+      let newGroups = { ...file.groups };
+
+      if (loc.context === 'root') {
+        newRoot = newRoot.filter((item) => item.id !== boxId);
+      } else {
+        const group = newGroups[loc.groupId];
+        newGroups = {
+          ...newGroups,
           [loc.groupId]: {
-            ...state.groups[loc.groupId],
-            boxIds: state.groups[loc.groupId].boxIds.filter(
-              (id) => id !== boxId
-            )
-          }
-        },
-        selectedBoxIds: state.selectedBoxIds.filter((id) => id !== boxId)
-      });
-    }
-  },
-
-  copyBox: (boxId) => {
-    const state = get();
-    const original = state.boxes[boxId];
-    if (!original) return;
-    const copy = newBoxData({
-      title: `${original.title} (copy)`,
-      content: original.content,
-      direction: original.direction,
-      mode: original.mode
-    });
-
-    const loc = findBoxLocation(state)(boxId);
-    set((s) => {
-      if (loc?.context === 'group') {
-        const group = s.groups[loc.groupId];
-        const newBoxIds = [...group.boxIds];
-        newBoxIds.splice(loc.index + 1, 0, copy.id);
-        return {
-          boxes: { ...s.boxes, [copy.id]: copy },
-          groups: {
-            ...s.groups,
-            [loc.groupId]: { ...group, boxIds: newBoxIds }
+            ...group,
+            boxIds: group.boxIds.filter((id) => id !== boxId)
           }
         };
       }
-      const idx = loc?.context === 'root' ? loc.index : s.rootOrder.length;
-      const newRoot = [...s.rootOrder];
-      newRoot.splice(idx + 1, 0, { type: 'box', id: copy.id });
-      return {
-        boxes: { ...s.boxes, [copy.id]: copy },
-        rootOrder: newRoot
+
+      files[fileId] = {
+        ...file,
+        rootOrder: newRoot,
+        boxes: newBoxes,
+        groups: newGroups,
+        selectedBoxIds: file.selectedBoxIds.filter((id) => id !== boxId)
       };
+      return { filesData: files };
+    });
+  },
+
+  copyBox: (boxId) => {
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const original = file.boxes[boxId];
+      if (!original) return {};
+
+      const copy = newBoxData({
+        title: `${original.title} (copy)`,
+        content: original.content,
+        direction: original.direction,
+        mode: original.mode
+      });
+
+      const loc = findBoxLocationInFile(file, boxId);
+      const newRoot = [...file.rootOrder];
+
+      if (loc?.context === 'group') {
+        const group = file.groups[loc.groupId];
+        const newBoxIds = [...group.boxIds];
+        newBoxIds.splice(loc.index + 1, 0, copy.id);
+        files[fileId] = {
+          ...file,
+          boxes: { ...file.boxes, [copy.id]: copy },
+          groups: {
+            ...file.groups,
+            [loc.groupId]: { ...group, boxIds: newBoxIds }
+          }
+        };
+      } else {
+        const idx = loc?.context === 'root' ? loc.index : newRoot.length - 1;
+        newRoot.splice(idx + 1, 0, { type: 'box', id: copy.id });
+        files[fileId] = {
+          ...file,
+          rootOrder: newRoot,
+          boxes: { ...file.boxes, [copy.id]: copy }
+        };
+      }
+      return { filesData: files };
     });
   },
 
   moveBoxUp: (boxId) => {
-    const state = get();
-    const loc = findBoxLocation(state)(boxId);
-    if (!loc || loc.index === 0) return;
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const loc = findBoxLocationInFile(file, boxId);
+      if (!loc || loc.index === 0) return {};
 
-    if (loc.context === 'root') {
-      const newRoot = [...state.rootOrder];
-      [newRoot[loc.index - 1], newRoot[loc.index]] = [
-        newRoot[loc.index],
-        newRoot[loc.index - 1]
-      ];
-      set({ rootOrder: newRoot });
-    } else {
-      const group = state.groups[loc.groupId];
-      const newBoxIds = [...group.boxIds];
-      [newBoxIds[loc.index - 1], newBoxIds[loc.index]] = [
-        newBoxIds[loc.index],
-        newBoxIds[loc.index - 1]
-      ];
-      set({
-        groups: {
-          ...state.groups,
-          [loc.groupId]: { ...group, boxIds: newBoxIds }
-        }
-      });
-    }
+      if (loc.context === 'root') {
+        const newRoot = [...file.rootOrder];
+        [newRoot[loc.index - 1], newRoot[loc.index]] = [
+          newRoot[loc.index],
+          newRoot[loc.index - 1]
+        ];
+        files[fileId] = { ...file, rootOrder: newRoot };
+      } else {
+        const group = file.groups[loc.groupId];
+        const newBoxIds = [...group.boxIds];
+        [newBoxIds[loc.index - 1], newBoxIds[loc.index]] = [
+          newBoxIds[loc.index],
+          newBoxIds[loc.index - 1]
+        ];
+        files[fileId] = {
+          ...file,
+          groups: {
+            ...file.groups,
+            [loc.groupId]: { ...group, boxIds: newBoxIds }
+          }
+        };
+      }
+      return { filesData: files };
+    });
   },
 
   moveBoxDown: (boxId) => {
-    const state = get();
-    const loc = findBoxLocation(state)(boxId);
-    if (!loc) return;
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const loc = findBoxLocationInFile(file, boxId);
+      if (!loc) return {};
 
-    if (loc.context === 'root') {
-      if (loc.index >= state.rootOrder.length - 1) return;
-      const newRoot = [...state.rootOrder];
-      [newRoot[loc.index], newRoot[loc.index + 1]] = [
-        newRoot[loc.index + 1],
-        newRoot[loc.index]
-      ];
-      set({ rootOrder: newRoot });
-    } else {
-      const group = state.groups[loc.groupId];
-      if (loc.index >= group.boxIds.length - 1) return;
-      const newBoxIds = [...group.boxIds];
-      [newBoxIds[loc.index], newBoxIds[loc.index + 1]] = [
-        newBoxIds[loc.index + 1],
-        newBoxIds[loc.index]
-      ];
-      set({
-        groups: {
-          ...state.groups,
-          [loc.groupId]: { ...group, boxIds: newBoxIds }
-        }
-      });
-    }
+      if (loc.context === 'root') {
+        if (loc.index >= file.rootOrder.length - 1) return {};
+        const newRoot = [...file.rootOrder];
+        [newRoot[loc.index], newRoot[loc.index + 1]] = [
+          newRoot[loc.index + 1],
+          newRoot[loc.index]
+        ];
+        files[fileId] = { ...file, rootOrder: newRoot };
+      } else {
+        const group = file.groups[loc.groupId];
+        if (loc.index >= group.boxIds.length - 1) return {};
+        const newBoxIds = [...group.boxIds];
+        [newBoxIds[loc.index], newBoxIds[loc.index + 1]] = [
+          newBoxIds[loc.index + 1],
+          newBoxIds[loc.index]
+        ];
+        files[fileId] = {
+          ...file,
+          groups: {
+            ...file.groups,
+            [loc.groupId]: { ...group, boxIds: newBoxIds }
+          }
+        };
+      }
+      return { filesData: files };
+    });
   },
 
   toggleBoxSelection: (boxId) =>
-    set((state) => ({
-      selectedBoxIds: state.selectedBoxIds.includes(boxId)
-        ? state.selectedBoxIds.filter((id) => id !== boxId)
-        : [...state.selectedBoxIds, boxId]
-    })),
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      files[fileId] = {
+        ...file,
+        selectedBoxIds: file.selectedBoxIds.includes(boxId)
+          ? file.selectedBoxIds.filter((id) => id !== boxId)
+          : [...file.selectedBoxIds, boxId]
+      };
+      return { filesData: files };
+    }),
 
-  // ---- Group Actions ----
+  // --- Group Actions ---
   addGroup: () => {
     const group = newGroupData();
-    set((state) => ({
-      groups: { ...state.groups, [group.id]: group },
-      rootOrder: [...state.rootOrder, { type: 'group', id: group.id }]
-    }));
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      files[fileId] = {
+        ...file,
+        groups: { ...file.groups, [group.id]: group },
+        rootOrder: [...file.rootOrder, { type: 'group', id: group.id }]
+      };
+      return { filesData: files };
+    });
   },
 
   updateGroupTitle: (groupId, title) =>
-    set((state) => ({
-      groups: {
-        ...state.groups,
-        [groupId]: { ...state.groups[groupId], title }
-      }
-    })),
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      if (!file.groups[groupId]) return {};
+      files[fileId] = {
+        ...file,
+        groups: {
+          ...file.groups,
+          [groupId]: { ...file.groups[groupId], title }
+        }
+      };
+      return { filesData: files };
+    }),
 
   deleteGroup: (groupId) => {
-    const state = get();
-    const group = state.groups[groupId];
-    if (!group) return;
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const group = file.groups[groupId];
+      if (!group) return {};
 
-    const newBoxes = { ...state.boxes };
-    for (const boxId of group.boxIds) {
-      delete newBoxes[boxId];
-    }
+      const newBoxes = { ...file.boxes };
+      for (const boxId of group.boxIds) delete newBoxes[boxId];
 
-    const newGroups = { ...state.groups };
-    delete newGroups[groupId];
+      const newGroups = { ...file.groups };
+      delete newGroups[groupId];
 
-    const newRoot = removeItemFromRoot(state.rootOrder, groupId);
+      const newRoot = file.rootOrder.filter((item) => item.id !== groupId);
 
-    set({
-      boxes: newBoxes,
-      groups: newGroups,
-      rootOrder: newRoot,
-      selectedBoxIds: state.selectedBoxIds.filter(
-        (id) => !group.boxIds.includes(id)
-      )
+      files[fileId] = {
+        ...file,
+        boxes: newBoxes,
+        groups: newGroups,
+        rootOrder: newRoot,
+        selectedBoxIds: file.selectedBoxIds.filter(
+          (id) => !group.boxIds.includes(id)
+        )
+      };
+      return { filesData: files };
     });
   },
 
   moveGroupUp: (groupId) => {
-    const state = get();
-    const idx = state.rootOrder.findIndex(
-      (item) => item.type === 'group' && item.id === groupId
-    );
-    if (idx <= 0) return;
-    const newRoot = [...state.rootOrder];
-    [newRoot[idx - 1], newRoot[idx]] = [newRoot[idx], newRoot[idx - 1]];
-    set({ rootOrder: newRoot });
-  },
-
-  moveGroupDown: (groupId) => {
-    const state = get();
-    const idx = state.rootOrder.findIndex(
-      (item) => item.type === 'group' && item.id === groupId
-    );
-    if (idx === -1 || idx >= state.rootOrder.length - 1) return;
-    const newRoot = [...state.rootOrder];
-    [newRoot[idx], newRoot[idx + 1]] = [newRoot[idx + 1], newRoot[idx]];
-    set({ rootOrder: newRoot });
-  },
-
-  toggleGroupCollapse: (groupId) =>
-    set((state) => ({
-      groups: {
-        ...state.groups,
-        [groupId]: {
-          ...state.groups[groupId],
-          collapsed: !state.groups[groupId].collapsed
-        }
-      }
-    })),
-
-  addBoxToGroup: (groupId) => {
-    const box = newBoxData();
-    set((state) => ({
-      boxes: { ...state.boxes, [box.id]: box },
-      groups: {
-        ...state.groups,
-        [groupId]: {
-          ...state.groups[groupId],
-          boxIds: [...state.groups[groupId].boxIds, box.id]
-        }
-      }
-    }));
-  },
-
-  groupSelectedBoxes: () => {
-    const state = get();
-    if (state.selectedBoxIds.length === 0) return;
-
-    const group = newGroupData({ title: 'Selected Zone' });
-
-    let newRoot = [...state.rootOrder];
-    const groupBoxIds: string[] = [];
-
-    for (const boxId of state.selectedBoxIds) {
-      const loc = findBoxLocation(state)(boxId);
-      if (loc?.context === 'root') {
-        newRoot = removeItemFromRoot(newRoot, boxId);
-        groupBoxIds.push(boxId);
-      }
-    }
-
-    if (groupBoxIds.length === 0) return;
-
-    group.boxIds = groupBoxIds;
-
-    const firstBoxId = groupBoxIds[0];
-    const firstIdx = state.rootOrder.findIndex(
-      (item) => item.type === 'box' && item.id === firstBoxId
-    );
-    const insertIdx = firstIdx >= 0 ? firstIdx : newRoot.length;
-    newRoot.splice(insertIdx, 0, { type: 'group', id: group.id });
-
-    set({
-      rootOrder: newRoot,
-      groups: { ...state.groups, [group.id]: group },
-      selectedBoxIds: []
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const idx = file.rootOrder.findIndex(
+        (item) => item.type === 'group' && item.id === groupId
+      );
+      if (idx <= 0) return {};
+      const newRoot = [...file.rootOrder];
+      [newRoot[idx - 1], newRoot[idx]] = [newRoot[idx], newRoot[idx - 1]];
+      files[fileId] = { ...file, rootOrder: newRoot };
+      return { filesData: files };
     });
   },
 
-  clearSelection: () => set({ selectedBoxIds: [] }),
+  moveGroupDown: (groupId) => {
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      const idx = file.rootOrder.findIndex(
+        (item) => item.type === 'group' && item.id === groupId
+      );
+      if (idx === -1 || idx >= file.rootOrder.length - 1) return {};
+      const newRoot = [...file.rootOrder];
+      [newRoot[idx], newRoot[idx + 1]] = [newRoot[idx + 1], newRoot[idx]];
+      files[fileId] = { ...file, rootOrder: newRoot };
+      return { filesData: files };
+    });
+  },
 
-  // ====== جدید: مدیریت مودال حذف ======
+  toggleGroupCollapse: (groupId) =>
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      if (!file.groups[groupId]) return {};
+      files[fileId] = {
+        ...file,
+        groups: {
+          ...file.groups,
+          [groupId]: {
+            ...file.groups[groupId],
+            collapsed: !file.groups[groupId].collapsed
+          }
+        }
+      };
+      return { filesData: files };
+    }),
+
+  addBoxToGroup: (groupId) => {
+    const box = newBoxData();
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      files[fileId] = {
+        ...file,
+        boxes: { ...file.boxes, [box.id]: box },
+        groups: {
+          ...file.groups,
+          [groupId]: {
+            ...file.groups[groupId],
+            boxIds: [...file.groups[groupId].boxIds, box.id]
+          }
+        }
+      };
+      return { filesData: files };
+    });
+  },
+
+  groupSelectedBoxes: () => {
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      if (file.selectedBoxIds.length === 0) return {};
+
+      const group = newGroupData({ title: 'Selected Zone' });
+
+      let newRoot = [...file.rootOrder];
+      const groupBoxIds: string[] = [];
+
+      for (const boxId of file.selectedBoxIds) {
+        const loc = findBoxLocationInFile(file, boxId);
+        if (loc?.context === 'root') {
+          newRoot = newRoot.filter((item) => item.id !== boxId);
+          groupBoxIds.push(boxId);
+        }
+      }
+
+      if (groupBoxIds.length === 0) return {};
+
+      group.boxIds = groupBoxIds;
+
+      const firstBoxId = groupBoxIds[0];
+      const firstIdx = file.rootOrder.findIndex(
+        (item) => item.type === 'box' && item.id === firstBoxId
+      );
+      const insertIdx = firstIdx >= 0 ? firstIdx : newRoot.length;
+      newRoot.splice(insertIdx, 0, { type: 'group', id: group.id });
+
+      files[fileId] = {
+        ...file,
+        rootOrder: newRoot,
+        groups: { ...file.groups, [group.id]: group },
+        selectedBoxIds: []
+      };
+      return { filesData: files };
+    });
+  },
+
+  clearSelection: () =>
+    set((state) => {
+      const fileId = state.currentFileId;
+      if (!fileId) return {};
+      const files = { ...state.filesData };
+      const file = files[fileId];
+      files[fileId] = { ...file, selectedBoxIds: [] };
+      return { filesData: files };
+    }),
+
+  // --- Delete modal ---
   requestDeleteBox: (boxId) => set({ pendingDeleteBoxId: boxId }),
+
   requestDeleteGroup: (groupId) => set({ pendingDeleteGroupId: groupId }),
+
   cancelDeletePrompt: () =>
     set({ pendingDeleteBoxId: null, pendingDeleteGroupId: null }),
+
   confirmDeletePrompt: () => {
     const { pendingDeleteBoxId, pendingDeleteGroupId } = get();
     if (pendingDeleteBoxId) {

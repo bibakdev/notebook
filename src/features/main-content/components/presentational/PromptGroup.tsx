@@ -1,3 +1,4 @@
+// src/features/main-content/components/presentational/PromptGroup.tsx
 'use client';
 
 import { cn } from '@/shared/lib/cn';
@@ -11,8 +12,17 @@ interface PromptGroupProps {
 }
 
 export function PromptGroup({ groupId }: PromptGroupProps) {
-  const group = usePromptStore((s) => s.groups[groupId]);
-  const boxes = usePromptStore((s) => s.boxes);
+  const group = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    if (!fileId) return undefined;
+    return s.filesData[fileId]?.groups[groupId];
+  });
+
+  const boxes = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    return fileId ? s.filesData[fileId]?.boxes : undefined;
+  });
+
   const updateGroupTitle = usePromptStore((s) => s.updateGroupTitle);
   const moveGroupUp = usePromptStore((s) => s.moveGroupUp);
   const moveGroupDown = usePromptStore((s) => s.moveGroupDown);
@@ -28,7 +38,7 @@ export function PromptGroup({ groupId }: PromptGroupProps) {
   };
 
   const handleDelete = () => {
-    requestDeleteGroup(groupId); // درخواست حذف (مودال را باز می‌کند)
+    requestDeleteGroup(groupId);
   };
 
   return (

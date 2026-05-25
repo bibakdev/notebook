@@ -1,3 +1,4 @@
+// src/features/main-content/components/containers/HeaderContainer.tsx
 'use client';
 
 import { useTheme } from 'next-themes';
@@ -13,8 +14,12 @@ export function HeaderContainer() {
   const toggleSidebar = useSidebarStore((s) => s.toggle);
   const addGroup = usePromptStore((s) => s.addGroup);
   const groupSelectedBoxes = usePromptStore((s) => s.groupSelectedBoxes);
-  const selectedBoxIds = usePromptStore((s) => s.selectedBoxIds);
   const addBox = usePromptStore((s) => s.addBox);
+  const currentFileId = usePromptStore((s) => s.currentFileId);
+  const selectedCount = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    return fileId ? (s.filesData[fileId]?.selectedBoxIds.length ?? 0) : 0;
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -26,29 +31,40 @@ export function HeaderContainer() {
       : '☀️ Light'
     : '🌙 Dark';
 
-  const hasSelected = selectedBoxIds.length > 0;
+  const hasSelected = selectedCount > 0;
+  const fileSelected = !!currentFileId;
 
   return (
     <HeaderView onMenuToggle={toggleSidebar}>
       <button
         onClick={() => addBox()}
-        className="rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10"
+        disabled={!fileSelected}
+        className={cn(
+          'rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10',
+          !fileSelected && 'opacity-40 cursor-not-allowed'
+        )}
+        title={fileSelected ? '' : 'ابتدا یک فایل انتخاب کنید'}
       >
         ＋ Card
       </button>
       <button
         onClick={addGroup}
-        className="rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10"
+        disabled={!fileSelected}
+        className={cn(
+          'rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10',
+          !fileSelected && 'opacity-40 cursor-not-allowed'
+        )}
+        title={fileSelected ? '' : 'ابتدا یک فایل انتخاب کنید'}
       >
         ＋ New Zone
       </button>
       <button
         onClick={groupSelectedBoxes}
+        disabled={!hasSelected}
         className={cn(
           'rounded-full border border-border bg-card px-4 py-2 text-sm font-mono text-foreground backdrop-blur transition hover:border-primary hover:text-primary hover:bg-primary/10',
-          !hasSelected && 'hidden'
+          !hasSelected && 'opacity-40 cursor-not-allowed'
         )}
-        style={hasSelected ? { display: 'inline-block' } : { display: 'none' }}
       >
         ⚡ Group Selected
       </button>

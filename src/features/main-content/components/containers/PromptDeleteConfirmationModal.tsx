@@ -9,14 +9,19 @@ export function PromptDeleteConfirmationModal() {
   const pendingDeleteGroupId = usePromptStore((s) => s.pendingDeleteGroupId);
   const cancelDeletePrompt = usePromptStore((s) => s.cancelDeletePrompt);
   const confirmDeletePrompt = usePromptStore((s) => s.confirmDeletePrompt);
-  const boxes = usePromptStore((s) => s.boxes);
-  const groups = usePromptStore((s) => s.groups);
+  const currentFileId = usePromptStore((s) => s.currentFileId);
 
-  const box = pendingDeleteBoxId ? boxes[pendingDeleteBoxId] : null;
-  const group = pendingDeleteGroupId ? groups[pendingDeleteGroupId] : null;
+  const box = usePromptStore((s) => {
+    if (!currentFileId || !pendingDeleteBoxId) return null;
+    return s.filesData[currentFileId]?.boxes[pendingDeleteBoxId];
+  });
+  const group = usePromptStore((s) => {
+    if (!currentFileId || !pendingDeleteGroupId) return null;
+    return s.filesData[currentFileId]?.groups[pendingDeleteGroupId];
+  });
+
   const isOpen = !!pendingDeleteBoxId || !!pendingDeleteGroupId;
 
-  // بستن با Escape
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {

@@ -11,16 +11,22 @@ interface PromptBoxProps {
 }
 
 export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
-  const box = usePromptStore((s) => s.boxes[boxId]);
-  const selectedBoxIds = usePromptStore((s) => s.selectedBoxIds);
+  const box = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    if (!fileId) return undefined;
+    return s.filesData[fileId]?.boxes[boxId];
+  });
+  const selected = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    return fileId ? s.filesData[fileId]?.selectedBoxIds.includes(boxId) : false;
+  });
+
   const updateBoxTitle = usePromptStore((s) => s.updateBoxTitle);
   const toggleBoxDirection = usePromptStore((s) => s.toggleBoxDirection);
   const moveBoxUp = usePromptStore((s) => s.moveBoxUp);
   const moveBoxDown = usePromptStore((s) => s.moveBoxDown);
   const toggleBoxSelection = usePromptStore((s) => s.toggleBoxSelection);
   const requestDeleteBox = usePromptStore((s) => s.requestDeleteBox);
-
-  const isSelected = selectedBoxIds.includes(boxId);
 
   if (!box) return null;
 
@@ -32,7 +38,7 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   };
 
   const handleDelete = () => {
-    requestDeleteBox(boxId); // درخواست حذف (مودال را باز می‌کند)
+    requestDeleteBox(boxId);
   };
 
   const handleCopyContent = async () => {
@@ -48,7 +54,7 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
       className={cn(
         'prompt-box bg-card rounded-xl border border-border border-r-4 border-r-primary/80 shadow-sm transition-all duration-200 relative',
         'hover:border-primary hover:shadow-md',
-        isSelected && 'ring-2 ring-primary/50 shadow-primary/10'
+        selected && 'ring-2 ring-primary/50 shadow-primary/10'
       )}
     >
       {/* Header */}
@@ -57,14 +63,14 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
           <span
             className={cn(
               'select-toggle cursor-pointer transition-colors text-base',
-              isSelected && 'text-primary'
+              selected && 'text-primary'
             )}
             onClick={(e) => {
               e.stopPropagation();
               toggleBoxSelection(boxId);
             }}
           >
-            {isSelected ? '☑' : '☐'}
+            {selected ? '☑' : '☐'}
           </span>
           <span className="header-title font-semibold text-foreground">
             {box.title}

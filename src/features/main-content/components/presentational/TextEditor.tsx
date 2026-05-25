@@ -10,7 +10,11 @@ interface TextEditorProps {
 }
 
 export function TextEditor({ boxId }: TextEditorProps) {
-  const box = usePromptStore((s) => s.boxes[boxId]);
+  const box = usePromptStore((s) => {
+    const fileId = s.currentFileId;
+    if (!fileId) return undefined;
+    return s.filesData[fileId]?.boxes[boxId];
+  });
   const updateBoxContent = usePromptStore((s) => s.updateBoxContent);
   const ref = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(false);
