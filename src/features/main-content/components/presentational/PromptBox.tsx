@@ -1,6 +1,7 @@
 // src/features/main-content/components/presentational/PromptBox.tsx
 'use client';
 
+import { useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { usePromptStore } from '../../store/prompt-store';
 import { TextEditor } from './TextEditor';
@@ -28,6 +29,8 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   const toggleBoxSelection = usePromptStore((s) => s.toggleBoxSelection);
   const requestDeleteBox = usePromptStore((s) => s.requestDeleteBox);
 
+  const [copied, setCopied] = useState(false);
+
   if (!box) return null;
 
   const isRTL = box.direction === 'rtl';
@@ -44,6 +47,8 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   const handleCopyContent = async () => {
     try {
       await navigator.clipboard.writeText(box.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('کپی محتوا ناموفق بود:', error);
     }
@@ -58,7 +63,7 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border text-sm font-mono text-muted-foreground">
+      <div className="relative flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border text-sm font-mono text-muted-foreground">
         <div className="flex items-center gap-2">
           <span
             className={cn(
@@ -112,13 +117,20 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
           >
             🗑️
           </button>
-          <button
-            className="icon-btn bg-transparent border border-transparent cursor-pointer text-sm px-1.5 py-1 rounded-md text-muted-foreground hover:bg-primary/10 hover:border-primary hover:text-primary transition"
-            title="کپی محتوا"
-            onClick={handleCopyContent}
-          >
-            📋
-          </button>
+          <div className="relative">
+            <button
+              className="icon-btn bg-transparent border border-transparent cursor-pointer text-sm px-1.5 py-1 rounded-md text-muted-foreground hover:bg-primary/10 hover:border-primary hover:text-primary transition"
+              title="کپی محتوا"
+              onClick={handleCopyContent}
+            >
+              📋
+            </button>
+            {copied && (
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50">
+                کپی شد!
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
