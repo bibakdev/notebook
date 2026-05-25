@@ -1,6 +1,7 @@
+// src/features/main-content/components/presentational/TextEditor.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import { usePromptStore } from '../../store/prompt-store';
 
@@ -14,22 +15,18 @@ export function TextEditor({ boxId }: TextEditorProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(false);
 
-  useEffect(() => {
-    const listener = (event: MouseEvent) => {
-      if (
-        ref.current &&
-        event.target &&
-        ref.current.contains(event.target as Node)
-      ) {
-        return;
-      }
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
       setEditing(false);
-    };
-    document.addEventListener('click', listener, { capture: true });
-    return () => {
-      document.removeEventListener('click', listener, { capture: true });
-    };
+    }
   }, []);
+
+  useEffect(() => {
+    if (editing) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [editing, handleKeyDown]);
 
   if (!box) return null;
 
@@ -41,6 +38,7 @@ export function TextEditor({ boxId }: TextEditorProps) {
         <MDEditor
           value={box.content}
           onChange={(v) => updateBoxContent(boxId, v || '')}
+          autoFocus
         />
       </div>
     );
