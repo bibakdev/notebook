@@ -14,11 +14,11 @@ export function PromptGroup({ groupId }: PromptGroupProps) {
   const group = usePromptStore((s) => s.groups[groupId]);
   const boxes = usePromptStore((s) => s.boxes);
   const updateGroupTitle = usePromptStore((s) => s.updateGroupTitle);
-  const deleteGroup = usePromptStore((s) => s.deleteGroup);
   const moveGroupUp = usePromptStore((s) => s.moveGroupUp);
   const moveGroupDown = usePromptStore((s) => s.moveGroupDown);
   const toggleGroupCollapse = usePromptStore((s) => s.toggleGroupCollapse);
   const addBoxToGroup = usePromptStore((s) => s.addBoxToGroup);
+  const requestDeleteGroup = usePromptStore((s) => s.requestDeleteGroup);
 
   if (!group) return null;
 
@@ -28,15 +28,12 @@ export function PromptGroup({ groupId }: PromptGroupProps) {
   };
 
   const handleDelete = () => {
-    if (confirm('این زون حذف شود؟')) {
-      deleteGroup(groupId);
-    }
+    requestDeleteGroup(groupId); // درخواست حذف (مودال را باز می‌کند)
   };
 
   return (
     <div
       className={cn(
-        // ↓ border و hover با primary
         'prompt-group bg-primary/5 border-2 border-dashed border-border rounded-2xl my-5 overflow-hidden backdrop-blur-sm shadow-sm transition-all',
         'hover:border-primary hover:shadow-md',
         group.collapsed && 'collapsed'

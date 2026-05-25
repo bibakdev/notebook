@@ -15,10 +15,10 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   const selectedBoxIds = usePromptStore((s) => s.selectedBoxIds);
   const updateBoxTitle = usePromptStore((s) => s.updateBoxTitle);
   const toggleBoxDirection = usePromptStore((s) => s.toggleBoxDirection);
-  const deleteBox = usePromptStore((s) => s.deleteBox);
   const moveBoxUp = usePromptStore((s) => s.moveBoxUp);
   const moveBoxDown = usePromptStore((s) => s.moveBoxDown);
   const toggleBoxSelection = usePromptStore((s) => s.toggleBoxSelection);
+  const requestDeleteBox = usePromptStore((s) => s.requestDeleteBox);
 
   const isSelected = selectedBoxIds.includes(boxId);
 
@@ -32,16 +32,12 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   };
 
   const handleDelete = () => {
-    if (confirm('این کارت حذف شود؟')) {
-      deleteBox(boxId);
-    }
+    requestDeleteBox(boxId); // درخواست حذف (مودال را باز می‌کند)
   };
 
-  // کپی محتوای باکس در کلیپ‌بورد
   const handleCopyContent = async () => {
     try {
       await navigator.clipboard.writeText(box.content);
-      // می‌توانید یک نوتیفیکیشن کوچک موفقیت نشان دهید (اختیاری)
     } catch (error) {
       console.error('کپی محتوا ناموفق بود:', error);
     }

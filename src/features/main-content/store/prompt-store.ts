@@ -52,6 +52,14 @@ interface PromptState {
   addBoxToGroup: (groupId: string) => void;
   groupSelectedBoxes: () => void;
   clearSelection: () => void;
+
+  // جدید: وضعیت‌های مودال حذف
+  pendingDeleteBoxId: string | null;
+  pendingDeleteGroupId: string | null;
+  requestDeleteBox: (boxId: string) => void;
+  requestDeleteGroup: (groupId: string) => void;
+  cancelDeletePrompt: () => void;
+  confirmDeletePrompt: () => void;
 }
 
 function findBoxLocation(
@@ -82,10 +90,12 @@ function removeItemFromRoot(rootOrder: RootItem[], itemId: string): RootItem[] {
 
 export const usePromptStore = create<PromptState>((set, get) => ({
   // ====== Initial State ======
-  rootOrder: [], // خالی – بدون باکس یا گروه پیش‌فرض
-  boxes: {}, // هیچ باکسی وجود ندارد
-  groups: {}, // هیچ گروهی وجود ندارد
+  rootOrder: [],
+  boxes: {},
+  groups: {},
   selectedBoxIds: [],
+  pendingDeleteBoxId: null,
+  pendingDeleteGroupId: null,
 
   // ---- Box Actions ----
   addBox: (parentGroupId) => {
@@ -427,5 +437,20 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     });
   },
 
-  clearSelection: () => set({ selectedBoxIds: [] })
+  clearSelection: () => set({ selectedBoxIds: [] }),
+
+  // ====== جدید: مدیریت مودال حذف ======
+  requestDeleteBox: (boxId) => set({ pendingDeleteBoxId: boxId }),
+  requestDeleteGroup: (groupId) => set({ pendingDeleteGroupId: groupId }),
+  cancelDeletePrompt: () =>
+    set({ pendingDeleteBoxId: null, pendingDeleteGroupId: null }),
+  confirmDeletePrompt: () => {
+    const { pendingDeleteBoxId, pendingDeleteGroupId } = get();
+    if (pendingDeleteBoxId) {
+      get().deleteBox(pendingDeleteBoxId);
+    } else if (pendingDeleteGroupId) {
+      get().deleteGroup(pendingDeleteGroupId);
+    }
+    set({ pendingDeleteBoxId: null, pendingDeleteGroupId: null });
+  }
 }));
