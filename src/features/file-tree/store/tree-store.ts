@@ -29,7 +29,7 @@ interface TreeState {
   confirmDeleteNode: () => void;
 
   toggleFolder: (id: string) => void;
-  selectNode: (id: string) => void;
+  selectNode: (id: string | null) => void;
   startAdding: (parentId: string | null, type: 'file' | 'folder') => void;
   cancelAdding: () => void;
   confirmAdding: (name: string) => void;
@@ -94,7 +94,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       }
     })),
 
-  selectNode: (id) => set({ selectedNodeId: id }),
+  selectNode: (id: string | null) => set({ selectedNodeId: id }),
 
   startAdding: (parentId, type) => {
     const state = get();
