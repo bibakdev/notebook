@@ -1,3 +1,4 @@
+// src/features/main-content/components/presentational/PromptBox.tsx
 'use client';
 
 import { cn } from '@/shared/lib/cn';
@@ -15,7 +16,6 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   const updateBoxTitle = usePromptStore((s) => s.updateBoxTitle);
   const toggleBoxDirection = usePromptStore((s) => s.toggleBoxDirection);
   const deleteBox = usePromptStore((s) => s.deleteBox);
-  const copyBox = usePromptStore((s) => s.copyBox);
   const moveBoxUp = usePromptStore((s) => s.moveBoxUp);
   const moveBoxDown = usePromptStore((s) => s.moveBoxDown);
   const toggleBoxSelection = usePromptStore((s) => s.toggleBoxSelection);
@@ -34,6 +34,16 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
   const handleDelete = () => {
     if (confirm('این کارت حذف شود؟')) {
       deleteBox(boxId);
+    }
+  };
+
+  // کپی محتوای باکس در کلیپ‌بورد
+  const handleCopyContent = async () => {
+    try {
+      await navigator.clipboard.writeText(box.content);
+      // می‌توانید یک نوتیفیکیشن کوچک موفقیت نشان دهید (اختیاری)
+    } catch (error) {
+      console.error('کپی محتوا ناموفق بود:', error);
     }
   };
 
@@ -102,8 +112,8 @@ export function PromptBox({ boxId, isStandalone = true }: PromptBoxProps) {
           </button>
           <button
             className="icon-btn bg-transparent border border-transparent cursor-pointer text-sm px-1.5 py-1 rounded-md text-muted-foreground hover:bg-primary/10 hover:border-primary hover:text-primary transition"
-            title="کپی"
-            onClick={() => copyBox(boxId)}
+            title="کپی محتوا"
+            onClick={handleCopyContent}
           >
             📋
           </button>
