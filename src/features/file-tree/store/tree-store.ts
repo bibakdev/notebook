@@ -17,14 +17,12 @@ interface TreeState {
   addingParentId: string | null;
   renamingNodeId: string | null;
 
-  // جدید: hydrate برای بارگذاری اولیه از DB
   hydrate: (payload: {
     treeData: TreeNode[];
     expandedFolders: Record<string, boolean>;
     selectedNodeId: string | null;
   }) => void;
 
-  // وضعیت حذف در انتظار تأیید
   pendingDeleteNodeId: string | null;
   requestDeleteNode: (nodeId: string) => void;
   cancelDeleteNode: () => void;
@@ -37,7 +35,6 @@ interface TreeState {
   confirmAdding: (name: string) => void;
   moveNode: (nodeId: string, targetParentId: string | null) => void;
 
-  // Rename & Delete actions
   startRenaming: (nodeId: string) => void;
   cancelRenaming: () => void;
   confirmRenaming: (newName: string) => void;
@@ -45,6 +42,22 @@ interface TreeState {
 }
 
 let nextId = 100;
+
+function computeMaxNodeId(treeData: TreeNode[]): number {
+  let max = 0;
+  const walk = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      const match = node.id.match(/^node-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > max) max = num;
+      }
+      if (node.children) walk(node.children);
+    }
+  };
+  walk(treeData);
+  return max;
+}
 
 export const useTreeStore = create<TreeState>((set, get) => ({
   treeData: [],
@@ -55,7 +68,13 @@ export const useTreeStore = create<TreeState>((set, get) => ({
   renamingNodeId: null,
   pendingDeleteNodeId: null,
 
-  hydrate: (payload) => set(payload),
+  hydrate: (payload) => {
+    const maxId = computeMaxNodeId(payload.treeData);
+    if (maxId >= nextId) {
+      nextId = maxId + 1;
+    }
+    set(payload);
+  },
 
   requestDeleteNode: (nodeId) => set({ pendingDeleteNodeId: nodeId }),
   cancelDeleteNode: () => set({ pendingDeleteNodeId: null }),
@@ -165,7 +184,6 @@ export const useTreeStore = create<TreeState>((set, get) => ({
       selectedNodeId: null,
       renamingNodeId: null
     });
-    // اگر فایل حذف شد، محتوای prompt آن را هم پاک کن
     if (node?.type === 'file') {
       const promptStore = usePromptStore.getState();
       promptStore.removeFiles([nodeId]);

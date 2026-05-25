@@ -4,6 +4,25 @@ import type { BoxData, GroupData, RootItem } from '../types';
 
 let nextId = 200;
 
+// -------- کمکی برای تنظیم شمارنده بعد از بارگذاری --------
+function computeMaxId(filesData: Record<string, FileContent>): number {
+  let max = 0;
+  const regex = /^(box|group)-(\d+)$/;
+  for (const file of Object.values(filesData)) {
+    for (const key of Object.keys(file.boxes).concat(
+      Object.keys(file.groups)
+    )) {
+      const match = key.match(regex);
+      if (match) {
+        const num = parseInt(match[2], 10);
+        if (num > max) max = num;
+      }
+    }
+  }
+  return max;
+}
+// ------------------------------------------------------
+
 function newBoxData(overrides: Partial<BoxData> = {}): BoxData {
   return {
     id: `box-${nextId++}`,
@@ -46,7 +65,6 @@ interface PromptState {
   currentFileId: string | null;
   setCurrentFile: (fileId: string | null) => void;
 
-  // جدید: بارگذاری اولیه و حذف گروهی
   setFilesData: (data: Record<string, FileContent>) => void;
   removeFiles: (fileIds: string[]) => void;
 
@@ -83,7 +101,6 @@ interface PromptState {
   confirmDeletePrompt: () => void;
 }
 
-// Helper: find box location inside a file's content
 function findBoxLocationInFile(
   file: FileContent,
   boxId: string
@@ -109,7 +126,13 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   pendingDeleteBoxId: null,
   pendingDeleteGroupId: null,
 
-  setFilesData: (data) => set({ filesData: data }),
+  setFilesData: (data) => {
+    const maxId = computeMaxId(data);
+    if (maxId >= nextId) {
+      nextId = maxId + 1;
+    }
+    set({ filesData: data });
+  },
 
   removeFiles: (fileIds) =>
     set((state) => {
