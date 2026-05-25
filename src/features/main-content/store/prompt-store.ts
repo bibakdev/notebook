@@ -36,7 +36,7 @@ function newBoxData(overrides: Partial<BoxData> = {}): BoxData {
 function newGroupData(overrides: Partial<GroupData> = {}): GroupData {
   return {
     id: `group-${nextId++}`,
-    title: 'New Zone',
+    title: 'New Group',
     collapsed: false,
     boxIds: [],
     ...overrides

@@ -56,7 +56,7 @@ export function HeaderContainer() {
         )}
         title={fileSelected ? '' : 'ابتدا یک فایل انتخاب کنید'}
       >
-        ＋ New Zone
+        ＋ New Group
       </button>
       <button
         onClick={groupSelectedBoxes}
