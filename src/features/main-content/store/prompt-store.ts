@@ -44,7 +44,11 @@ function emptyFileContent(): FileContent {
 interface PromptState {
   filesData: Record<string, FileContent>;
   currentFileId: string | null;
-  setCurrentFile: (fileId: string | null) => void; // also ensures data
+  setCurrentFile: (fileId: string | null) => void;
+
+  // جدید: بارگذاری اولیه و حذف گروهی
+  setFilesData: (data: Record<string, FileContent>) => void;
+  removeFiles: (fileIds: string[]) => void;
 
   // Box actions
   addBox: (parentGroupId?: string) => void;
@@ -79,15 +83,6 @@ interface PromptState {
   confirmDeletePrompt: () => void;
 }
 
-// Helper: get mutable file state for current file (or undefined)
-function getCurrentFileState(
-  state: Pick<PromptState, 'filesData' | 'currentFileId'>
-): FileContent | undefined {
-  const id = state.currentFileId;
-  if (!id) return undefined;
-  return state.filesData[id];
-}
-
 // Helper: find box location inside a file's content
 function findBoxLocationInFile(
   file: FileContent,
@@ -114,6 +109,17 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   pendingDeleteBoxId: null,
   pendingDeleteGroupId: null,
 
+  setFilesData: (data) => set({ filesData: data }),
+
+  removeFiles: (fileIds) =>
+    set((state) => {
+      const newFiles = { ...state.filesData };
+      for (const id of fileIds) {
+        delete newFiles[id];
+      }
+      return { filesData: newFiles };
+    }),
+
   setCurrentFile: (fileId) => {
     if (fileId) {
       set((state) => {
@@ -124,7 +130,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         return {
           filesData: newFiles,
           currentFileId: fileId,
-          pendingDeleteBoxId: null, // cancel any pending modal on switch
+          pendingDeleteBoxId: null,
           pendingDeleteGroupId: null
         };
       });
@@ -621,7 +627,6 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
   // --- Delete modal ---
   requestDeleteBox: (boxId) => set({ pendingDeleteBoxId: boxId }),
-
   requestDeleteGroup: (groupId) => set({ pendingDeleteGroupId: groupId }),
 
   cancelDeletePrompt: () =>

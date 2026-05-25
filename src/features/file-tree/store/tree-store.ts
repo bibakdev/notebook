@@ -7,6 +7,7 @@ import {
   removeNodeById,
   insertNode
 } from '../lib/tree-utils';
+import { usePromptStore } from '@/features/main-content/store/prompt-store';
 
 interface TreeState {
   treeData: TreeNode[];
@@ -16,7 +17,14 @@ interface TreeState {
   addingParentId: string | null;
   renamingNodeId: string | null;
 
-  // جدید: وضعیت حذف در انتظار تأیید
+  // جدید: hydrate برای بارگذاری اولیه از DB
+  hydrate: (payload: {
+    treeData: TreeNode[];
+    expandedFolders: Record<string, boolean>;
+    selectedNodeId: string | null;
+  }) => void;
+
+  // وضعیت حذف در انتظار تأیید
   pendingDeleteNodeId: string | null;
   requestDeleteNode: (nodeId: string) => void;
   cancelDeleteNode: () => void;
@@ -38,53 +46,23 @@ interface TreeState {
 
 let nextId = 100;
 
-const initialTreeData: TreeNode[] = [
-  {
-    id: 'impl',
-    label: 'Implementation',
-    type: 'folder',
-    defaultOpen: true,
-    children: [
-      { id: 'scaffold', label: 'scaffold', type: 'file' },
-      { id: 'prompts', label: 'prompts', type: 'file' }
-    ]
-  },
-  {
-    id: 'front-workflow',
-    label: 'front-workflow',
-    type: 'folder',
-    children: []
-  },
-  {
-    id: 'component-tree',
-    label: 'component-tree',
-    type: 'folder',
-    children: []
-  },
-  {
-    id: 'fundamentals',
-    label: 'Fundamentals',
-    type: 'folder',
-    children: []
-  }
-];
-
 export const useTreeStore = create<TreeState>((set, get) => ({
-  treeData: initialTreeData,
-  expandedFolders: { impl: true },
+  treeData: [],
+  expandedFolders: {},
   selectedNodeId: null,
   addingType: null,
   addingParentId: null,
   renamingNodeId: null,
-
-  // جدید
   pendingDeleteNodeId: null,
+
+  hydrate: (payload) => set(payload),
+
   requestDeleteNode: (nodeId) => set({ pendingDeleteNodeId: nodeId }),
   cancelDeleteNode: () => set({ pendingDeleteNodeId: null }),
   confirmDeleteNode: () => {
     const { pendingDeleteNodeId } = get();
     if (pendingDeleteNodeId) {
-      get().deleteNode(pendingDeleteNodeId); // از تابع حذف موجود استفاده می‌کنیم
+      get().deleteNode(pendingDeleteNodeId);
       set({ pendingDeleteNodeId: null });
     }
   },
@@ -152,9 +130,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     set({ treeData: finalTree });
   },
 
-  // --- Rename ---
   startRenaming: (nodeId) => set({ renamingNodeId: nodeId }),
-
   cancelRenaming: () => set({ renamingNodeId: null }),
 
   confirmRenaming: (newName) => {
@@ -180,14 +156,19 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     });
   },
 
-  // --- Delete (بدون تغییر) ---
   deleteNode: (nodeId) => {
     const { treeData } = get();
+    const node = findNodeById(treeData, nodeId);
     const { newTree } = removeNodeById(treeData, nodeId);
     set({
       treeData: newTree,
       selectedNodeId: null,
       renamingNodeId: null
     });
+    // اگر فایل حذف شد، محتوای prompt آن را هم پاک کن
+    if (node?.type === 'file') {
+      const promptStore = usePromptStore.getState();
+      promptStore.removeFiles([nodeId]);
+    }
   }
 }));
