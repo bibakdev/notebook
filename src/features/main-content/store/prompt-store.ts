@@ -63,13 +63,11 @@ function findBoxLocation(
   | { context: 'group'; groupId: string; index: number }
   | null {
   return (boxId: string) => {
-    // Check root
     const rootIndex = state.rootOrder.findIndex(
       (item) => item.type === 'box' && item.id === boxId
     );
     if (rootIndex !== -1) return { context: 'root', index: rootIndex };
 
-    // Check groups
     for (const [groupId, group] of Object.entries(state.groups)) {
       const idx = group.boxIds.indexOf(boxId);
       if (idx !== -1) return { context: 'group', groupId, index: idx };
@@ -78,74 +76,15 @@ function findBoxLocation(
   };
 }
 
-// این تابع جایگزین removeBoxFromRoot می‌شود و هر نوع آیتم را حذف می‌کند
 function removeItemFromRoot(rootOrder: RootItem[], itemId: string): RootItem[] {
   return rootOrder.filter((item) => item.id !== itemId);
 }
 
-// ====== Initial Data ======
-const initialBoxes: Record<string, BoxData> = {
-  'box-1': {
-    id: 'box-1',
-    title: 'State Machine Prompt',
-    direction: 'rtl',
-    content: `# State Machine Prompt
-می‌توانم به صورت **state machine** عملی کنی هر دستوری را انجام بدی و منتظر فرمان بعدی من باشی.
-
-- دستورات را به صورت زنجیره‌ای پردازش می‌کنم
-- وضعیت فعلی را حفظ می‌کنم
-- با هر فرمان جدید، وضعیت تغییر می‌کند`
-  },
-  'box-2': {
-    id: 'box-2',
-    title: 'Bash Command',
-    direction: 'ltr',
-    content: `\`\`\`bash
-find . \\( -path './node_modules' -o -path './next' -o -path './git' \\) -prune -o -print | sort | awk -F '/' '{for(i=1;i<NF;i++)printf("%s|",$i); print "|"}' | tail -n +2
-\`\`\`
-این دستور **bash** فایل‌ها را با فیلتر کردن پوشه‌های خاص لیست می‌کند.`
-  },
-  'box-3': {
-    id: 'box-3',
-    title: 'Repomix Output',
-    direction: 'ltr',
-    content: `\`\`\`bash
-repomix --include 'src/modules/ui-shell/components/Sidebar.tsx,...'
-\`\`\`
-> این دستور **repomix** برای ترکیب فایل‌های مشخص شده استفاده می‌شود.`
-  },
-  'box-4': {
-    id: 'box-4',
-    title: 'Package Installation',
-    direction: 'ltr',
-    content: `\`\`\`bash
-install -D /dev/null src/modules/history/store.ts
-\`\`\`
-نصب پکیج در مسیر مشخص شده.`
-  },
-  'box-5': {
-    id: 'box-5',
-    title: 'Implementation Question',
-    direction: 'rtl',
-    content: `## سوال پیاده‌سازی
-برای پیاده‌سازی این ماژول چه فایل‌هایی نیاز داری بخونی، چه فایل‌هایی تغییر بدی و چه فایل‌های جدیدی می‌سازی؟
-
-1. **فایل‌های خواندنی:** مستندات، کدهای موجود
-2. **فایل‌های تغییری:** کامپوننت‌های مرتبط، استورها
-3. **فایل‌های جدید:** کامپوننت جدید، تایپ‌ها، یوتیلیتی‌ها`
-  }
-};
-
 export const usePromptStore = create<PromptState>((set, get) => ({
-  rootOrder: [
-    { type: 'box', id: 'box-1' },
-    { type: 'box', id: 'box-2' },
-    { type: 'box', id: 'box-3' },
-    { type: 'box', id: 'box-4' },
-    { type: 'box', id: 'box-5' }
-  ],
-  boxes: initialBoxes,
-  groups: {},
+  // ====== Initial State ======
+  rootOrder: [], // خالی – بدون باکس یا گروه پیش‌فرض
+  boxes: {}, // هیچ باکسی وجود ندارد
+  groups: {}, // هیچ گروهی وجود ندارد
   selectedBoxIds: [],
 
   // ---- Box Actions ----
@@ -171,12 +110,10 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     });
   },
 
-  // ** جدید: افزودن باکس بعد از یک موقعیت خاص در rootOrder **
   addBoxAfter: (afterItemId) => {
     const box = newBoxData();
     set((state) => {
       if (afterItemId === null) {
-        // درج در ابتدای rootOrder
         return {
           boxes: { ...state.boxes, [box.id]: box },
           rootOrder: [{ type: 'box', id: box.id }, ...state.rootOrder]
@@ -185,7 +122,6 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
       const idx = state.rootOrder.findIndex((item) => item.id === afterItemId);
       if (idx === -1) {
-        // fallback: انتهای لیست
         return {
           boxes: { ...state.boxes, [box.id]: box },
           rootOrder: [...state.rootOrder, { type: 'box', id: box.id }]
@@ -397,7 +333,6 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     const newGroups = { ...state.groups };
     delete newGroups[groupId];
 
-    // استفاده از removeItemFromRoot که هم باکس و هم گروه را حذف می‌کند
     const newRoot = removeItemFromRoot(state.rootOrder, groupId);
 
     set({
