@@ -22,7 +22,7 @@ export function SidebarTree({ children }: SidebarTreeProps) {
   return (
     <div
       className={cn(
-        'flex-1 overflow-y-auto px-4 pb-4 rounded-lg transition-colors',
+        'flex-1 overflow-y-auto px-4 pb-36 rounded-lg transition-colors',
         // highlight when root is selected OR when dragging over root
         (selectedNodeId === null || isDragOver) &&
           'ring-2 ring-primary/50 bg-muted/30'
