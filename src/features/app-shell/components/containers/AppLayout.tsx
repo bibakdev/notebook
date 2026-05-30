@@ -7,7 +7,7 @@ import { DatabaseSync } from './DatabaseSync';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       <DatabaseSync />
       <FileSync />
       <SidebarContainer />
