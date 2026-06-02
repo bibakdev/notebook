@@ -93,3 +93,29 @@
 .text-editor .token.list.punctuation {
   background-color: unset;
 }
+
+/* ========== RTL Support for MDEditor ========== */
+
+/* ۱. حفظ ساختار کلی ادیتور به صورت چپ‌به‌راست برای جلوگیری از شکستن پنل‌ها */
+.text-editor[dir='rtl'] .w-md-editor {
+  direction: ltr !important;
+}
+
+/* ۲. راست‌چین کردن محیط تایپ و کدهای هایلایت شده */
+.text-editor[dir='rtl'] .w-md-editor-text-input,
+.text-editor[dir='rtl'] .w-md-editor-text-pre {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* ۳. راست‌چین کردن بخش پیش‌نمایش (Preview) */
+.text-editor[dir='rtl'] .wmde-markdown {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* ۴. در صورت نیاز، اصلاح جهت لیست‌ها در پیش‌نمایش */
+.text-editor[dir='rtl'] .wmde-markdown ul,
+.text-editor[dir='rtl'] .wmde-markdown ol {
+  direction: rtl !important;
+}
