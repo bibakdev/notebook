@@ -76,6 +76,7 @@ export function TextEditor({ boxId }: TextEditorProps) {
           value={box.content}
           onChange={(v) => updateBoxContent(boxId, v || '')}
           autoFocus
+          textareaProps={{ dir: 'auto' }}
           extraCommands={[
             commands.codeEdit,
             commands.codeLive,

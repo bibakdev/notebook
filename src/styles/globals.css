@@ -96,28 +96,58 @@
 
 /* ========== RTL Support for MDEditor ========== */
 
-/* ۱. حفظ ساختار کلی ادیتور به صورت چپ‌به‌راست برای جلوگیری از شکستن پنل‌ها */
+/* ۱. حفظ ساختار کلی ادیتور به صورت چپ‌به‌راست برای جلوگیری از شکستن پنل ابزارها */
 .text-editor[dir='rtl'] .w-md-editor {
   direction: ltr !important;
 }
 
-/* ۲. راست‌چین کردن محیط تایپ و کدهای هایلایت شده */
+/* ۲. جادوی تشخیص خودکار جهت در محیط تایپ (هم تکست‌اریا و هم لایه رنگی) */
 .text-editor[dir='rtl'] .w-md-editor-text-input,
 .text-editor[dir='rtl'] .w-md-editor-text-pre {
-  direction: rtl !important;
-  text-align: right !important;
+  direction: rtl !important; /* پایه راست‌چین برای حفظ اسکرول بار در سمت چپ */
+  text-align: start !important; /* خطوط بر اساس زبان شروع می‌شوند */
+  unicode-bidi: plaintext !important; /* تشخیص زبان هر خط به صورت مستقل */
 }
 
-/* ۳. راست‌چین کردن بخش پیش‌نمایش (Preview) */
+/* ۳. راست‌چین کردن بخش پیش‌نمایش به صورت هوشمند */
 .text-editor[dir='rtl'] .wmde-markdown {
   direction: rtl !important;
-  text-align: right !important;
+  text-align: start !important;
 }
 
-/* ۴. در صورت نیاز، اصلاح جهت لیست‌ها در پیش‌نمایش */
+/* تشخیص خودکار جهت برای تگ‌های متن در محیط پیش‌نمایش */
+.text-editor[dir='rtl'] .wmde-markdown p,
+.text-editor[dir='rtl'] .wmde-markdown h1,
+.text-editor[dir='rtl'] .wmde-markdown h2,
+.text-editor[dir='rtl'] .wmde-markdown h3,
+.text-editor[dir='rtl'] .wmde-markdown h4,
+.text-editor[dir='rtl'] .wmde-markdown h5,
+.text-editor[dir='rtl'] .wmde-markdown h6,
 .text-editor[dir='rtl'] .wmde-markdown ul,
-.text-editor[dir='rtl'] .wmde-markdown ol {
-  direction: rtl !important;
+.text-editor[dir='rtl'] .wmde-markdown ol,
+.text-editor[dir='rtl'] .wmde-markdown li,
+.text-editor[dir='rtl'] .wmde-markdown blockquote {
+  text-align: start !important;
+  unicode-bidi: plaintext !important;
+}
+
+/* ۴. فورس کردن بلاک‌های کد و کدهای اینلاین به سمت چپ و انگلیسی */
+.text-editor .wmde-markdown pre,
+.text-editor .wmde-markdown code {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+
+/* رفع مشکل کدهای اینلاین (مثل `npm install`) وسط متن‌های فارسی */
+.text-editor[dir='rtl'] .wmde-markdown code {
+  display: inline-block;
+  direction: ltr !important;
+}
+
+/* استثنا برای بلاک‌های اصلی کد که باید کل عرض را بگیرند */
+.text-editor[dir='rtl'] .wmde-markdown pre code {
+  display: block;
 }
 
 /* ========== Dynamic Font Size for Editor ========== */
