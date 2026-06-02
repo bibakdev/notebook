@@ -119,3 +119,28 @@
 .text-editor[dir='rtl'] .wmde-markdown ol {
   direction: rtl !important;
 }
+
+/* ========== Dynamic Font Size for Editor ========== */
+/* اعمال سایز فونت به باکس اصلی و پیش‌نمایش */
+.text-editor {
+  --editor-font-size: 16px;
+}
+
+/* اعمال روی محیط پیش‌نمایش نهایی در کارت */
+.text-editor .wmde-markdown {
+  font-size: var(--editor-font-size) !important;
+  line-height: 1.8 !important;
+}
+
+/* اعمال روی لایه رنگ‌بندی شده (pre) و لایه تایپ (textarea) در حالت ویرایش */
+.text-editor .w-md-editor-text,
+.text-editor .w-md-editor-text-pre,
+.text-editor .w-md-editor-text-input {
+  font-size: var(--editor-font-size) !important;
+  line-height: 1.8 !important;
+}
+
+/* رفع مشکل کرسر و عدم تطابق هنگام انتخاب متن (Select) */
+.text-editor .w-md-editor-text-pre > code {
+  font-size: inherit !important;
+}
