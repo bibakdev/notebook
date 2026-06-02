@@ -1,5 +1,5 @@
 // public/sw.js
-const CACHE_NAME = 'notebook-v2';
+const CACHE_NAME = 'notebook-v3';
 
 const PRECACHE_ASSETS = [
   '/',
